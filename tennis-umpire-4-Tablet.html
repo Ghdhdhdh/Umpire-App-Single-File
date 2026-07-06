@@ -1,0 +1,2194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Court — Tennis Umpire</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #1a3a2a;
+    --green-mid: #1e4d34;
+    --green-light: #2d6b48;
+    --accent: #c8f55a;
+    --accent-dim: #9dbf3e;
+    --white: #f0ede6;
+    --grey: #8a9a8e;
+    --grey-dark: #3a4a3e;
+    --red: #e84040;
+    --amber: #f5a623;
+    --panel: rgba(10,25,16,0.97);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--green);
+    color: var(--white);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── TOP BAR ── */
+  #topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background: rgba(0,0,0,0.35);
+    border-bottom: 1px solid rgba(200,245,90,0.15);
+    position: sticky; top: 0; z-index: 100;
+  }
+  #topbar .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem;
+    letter-spacing: 3px;
+    color: var(--accent);
+  }
+  #topbar-timer-pill {
+    display: none;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(200,245,90,0.3);
+    padding: 4px 10px;
+    cursor: pointer;
+  }
+  #topbar-timer-pill.visible { display: flex; }
+  #topbar-timer-pill .pill-time {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    color: var(--accent);
+    letter-spacing: 2px;
+    line-height: 1;
+  }
+  #topbar-timer-pill .pill-time.warning { color: var(--amber); }
+  #topbar-timer-pill .pill-time.danger { color: var(--red); animation: pulse 0.5s infinite alternate; }
+  #topbar-timer-pill .pill-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--grey);
+    letter-spacing: 1px;
+  }
+
+  #topbar .match-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 1rem;
+    color: var(--grey);
+  }
+  #stats-toggle {
+    background: none;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  #stats-toggle:hover { background: var(--accent); color: var(--green); }
+
+  /* ── SETUP SCREEN ── */
+  #setup-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(100vh - 54px);
+    padding: 40px 20px;
+    gap: 32px;
+  }
+  #setup-screen h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    letter-spacing: 6px;
+    color: var(--accent);
+    text-align: center;
+  }
+  #setup-screen p {
+    color: var(--grey);
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+    text-align: center;
+  }
+  .setup-fields {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    max-width: 600px;
+  }
+  .setup-fields input {
+    flex: 1;
+    min-width: 200px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(200,245,90,0.3);
+    color: var(--white);
+    font-family: 'DM Mono', monospace;
+    font-size: 1rem;
+    padding: 14px 18px;
+    outline: none;
+    text-align: center;
+    transition: border-color 0.2s;
+  }
+  .setup-fields input::placeholder { color: var(--grey); }
+  .setup-fields input:focus { border-color: var(--accent); }
+
+  .format-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .fmt-btn {
+    background: none;
+    border: 1px solid var(--grey-dark);
+    color: var(--grey);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .fmt-btn.active, .fmt-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  #start-btn {
+    background: var(--accent);
+    border: none;
+    color: var(--green);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    letter-spacing: 4px;
+    padding: 16px 60px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  #start-btn:hover { background: var(--accent-dim); transform: scale(1.02); }
+
+  /* ── MAIN COURT ── */
+  #court-screen { display: none; }
+
+  #court-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    min-height: calc(100vh - 54px);
+  }
+
+  .player-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px 20px;
+    gap: 12px;
+    position: relative;
+    border-right: 1px solid rgba(200,245,90,0.08);
+    transition: background 0.3s;
+  }
+  .player-panel:last-child { border-right: none; }
+  .player-panel.serving::before {
+    content: '● SERVING';
+    position: absolute;
+    top: 10px; left: 50%; transform: translateX(-50%);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 3px;
+    color: var(--accent);
+  }
+  .player-panel.last-won {
+    background: rgba(200,245,90,0.04);
+  }
+
+  .player-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1.4rem, 4vw, 2.2rem);
+    letter-spacing: 3px;
+    color: var(--white);
+    text-align: center;
+    margin-top: 14px;
+  }
+
+  .score-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+  }
+  .point-score {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(5rem, 16vw, 9rem);
+    line-height: 1;
+    color: var(--accent);
+    text-shadow: 0 0 40px rgba(200,245,90,0.2);
+  }
+  .sets-row {
+    display: flex;
+    gap: 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--grey);
+  }
+  .set-val { color: var(--white); }
+  .games-score {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.5rem, 8vw, 4rem);
+    color: var(--white);
+    opacity: 0.7;
+  }
+
+  /* ── POINT BUTTONS ── */
+  .win-btn {
+    width: 100%;
+    max-width: 280px;
+    padding: 16px;
+    background: var(--accent);
+    border: none;
+    color: var(--green);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.3rem;
+    letter-spacing: 3px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-top: 8px;
+  }
+  .win-btn:hover { background: var(--accent-dim); transform: scale(1.02); }
+  .win-btn:active { transform: scale(0.98); }
+
+  .reason-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+    max-width: 280px;
+  }
+  .reason-btn {
+    padding: 9px 6px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--grey-dark);
+    color: var(--grey);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    line-height: 1.3;
+  }
+  .reason-btn:hover { border-color: var(--accent); color: var(--white); }
+  .reason-btn.selected { border-color: var(--accent); background: rgba(200,245,90,0.1); color: var(--accent); }
+
+  /* ── BOTTOM CONTROLS ── */
+  #bottom-controls {
+    width: 100%;
+    background: rgba(0,0,0,0.3);
+    border-top: 1px solid rgba(200,245,90,0.12);
+    padding: 20px 16px 32px;
+  }
+
+  .bottom-section {
+    max-width: 480px;
+    margin: 0 auto 24px;
+  }
+  .bottom-section:last-child { margin-bottom: 0; }
+
+  .bottom-section h3 {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    color: var(--grey);
+    text-align: center;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--grey-dark);
+    padding-bottom: 6px;
+  }
+  .timer-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .timer-preset {
+    background: none;
+    border: 1px solid var(--grey-dark);
+    color: var(--grey);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    padding: 8px 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .timer-preset:hover { border-color: var(--accent); color: var(--accent); }
+  .timer-preset.running { border-color: var(--red); color: var(--red); }
+
+  @keyframes pulse { from { opacity: 1; } to { opacity: 0.4; } }
+
+  .timer-action-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 6px;
+    display: none;
+  }
+  .timer-action-row.visible { display: grid; }
+  #stop-timer {
+    background: none;
+    border: 1px solid var(--red);
+    color: var(--red);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    padding: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  #stop-timer:hover { background: var(--red); color: white; }
+  #pause-timer {
+    background: none;
+    border: 1px solid var(--amber);
+    color: var(--amber);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    padding: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  #pause-timer:hover { background: var(--amber); color: var(--green); }
+
+  #undo-btn {
+    width: 100%;
+    background: none;
+    border: 1px solid var(--grey-dark);
+    color: var(--grey);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    padding: 8px;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: all 0.2s;
+  }
+  #undo-btn:hover { border-color: var(--white); color: var(--white); }
+
+  /* ── STATS PANEL ── */
+  #stats-panel {
+    position: fixed;
+    top: 0; right: -420px;
+    width: 380px;
+    height: 100vh;
+    background: var(--panel);
+    border-left: 1px solid rgba(200,245,90,0.2);
+    overflow-y: auto;
+    transition: right 0.35s cubic-bezier(0.4,0,0.2,1);
+    z-index: 200;
+    padding: 24px 20px;
+  }
+  #stats-panel.open { right: 0; }
+
+  #stats-panel h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    letter-spacing: 4px;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  #stats-panel .sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    color: var(--grey);
+    margin-bottom: 24px;
+  }
+  .stat-section {
+    margin-bottom: 20px;
+  }
+  .stat-section h4 {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    color: var(--grey);
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--grey-dark);
+    padding-bottom: 6px;
+  }
+  .stat-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .stat-val-left {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    color: var(--white);
+    text-align: right;
+  }
+  .stat-val-right {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    color: var(--white);
+    text-align: left;
+  }
+  .stat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--grey);
+    text-align: center;
+    letter-spacing: 1px;
+  }
+  .stat-bar-row {
+    margin-bottom: 10px;
+  }
+  .stat-bar-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--grey);
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .stat-bar-track {
+    height: 4px;
+    background: var(--grey-dark);
+    display: flex;
+    overflow: hidden;
+  }
+  .stat-bar-fill-left {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.4s;
+  }
+  .stat-bar-fill-right {
+    height: 100%;
+    background: var(--white);
+    opacity: 0.5;
+    transition: width 0.4s;
+  }
+
+  #close-stats {
+    position: absolute;
+    top: 16px; right: 16px;
+    background: none;
+    border: none;
+    color: var(--grey);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 6px;
+  }
+  #close-stats:hover { color: var(--white); }
+
+  /* ── POINT LOG ── */
+  .log-section { margin-top: 20px; }
+  .log-entry {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--grey);
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .log-entry .log-num { color: var(--grey-dark); min-width: 20px; }
+  .log-entry .log-winner { color: var(--accent); }
+  .log-entry .log-reason { color: var(--grey); }
+
+  /* ── GIVE SET / TIEBREAK BUTTONS ── */
+  .giveset-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .giveset-btn {
+    padding: 12px 8px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--grey-dark);
+    color: var(--white);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .giveset-btn:hover { border-color: var(--accent); background: rgba(200,245,90,0.08); color: var(--accent); }
+
+  .tb-row {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 8px;
+  }
+  .tb-btn {
+    padding: 12px 6px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--grey-dark);
+    color: var(--white);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .tb-btn:hover { border-color: var(--amber); background: rgba(245,166,35,0.08); color: var(--amber); }
+  .tb-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  #tb-note {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--grey);
+    text-align: center;
+    margin-top: 6px;
+    letter-spacing: 1px;
+  }
+
+  /* ── FLASH OVERLAY ── */
+  #flash {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 300;
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+  #flash.show { opacity: 1; animation: flashout 0.5s forwards; }
+  @keyframes flashout { 0%{opacity:0.4} 100%{opacity:0} }
+
+  /* ── GAME/SET WON BANNER ── */
+  #banner {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    background: var(--panel);
+    border: 2px solid var(--accent);
+    padding: 32px 60px;
+    text-align: center;
+    z-index: 400;
+    display: none;
+    opacity: 0;
+    transition: all 0.3s;
+  }
+  #banner.show {
+    display: block;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  #banner h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    letter-spacing: 5px;
+    color: var(--grey);
+    margin-bottom: 4px;
+  }
+  #banner .banner-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.8rem;
+    letter-spacing: 4px;
+    color: var(--accent);
+  }
+
+  /* ── MATCH OVER ── */
+  #match-over {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(10,25,16,0.97);
+    z-index: 500;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    gap: 16px;
+    overflow-y: auto;
+  }
+  #match-over.show { display: flex; }
+  #match-over h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2rem, 8vw, 4rem);
+    letter-spacing: 6px;
+    color: var(--accent);
+    text-align: center;
+  }
+  #match-over .winner-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 3px;
+    color: var(--grey);
+  }
+  #match-over .final-score {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1.5rem, 5vw, 2.5rem);
+    color: var(--white);
+    letter-spacing: 4px;
+  }
+  #new-match-btn {
+    background: var(--accent);
+    border: none;
+    color: var(--green);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.2rem;
+    letter-spacing: 4px;
+    padding: 14px 48px;
+    cursor: pointer;
+    margin-top: 16px;
+    transition: all 0.2s;
+  }
+  #new-match-btn:hover { background: var(--accent-dim); }
+
+  /* overlay for stats panel */
+  #overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 150;
+  }
+  #overlay.show { display: block; }
+
+  /* ── FAULT BUTTONS on player panels ── */
+  .fault-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    width: 100%;
+    max-width: 280px;
+  }
+  .fault-btn {
+    padding: 8px 6px;
+    background: rgba(232,64,64,0.08);
+    border: 1px solid rgba(232,64,64,0.3);
+    color: #e88080;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+  .fault-btn:hover { border-color: var(--red); background: rgba(232,64,64,0.15); color: var(--white); }
+  .fault-indicator {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    color: var(--red);
+    text-align: center;
+    min-height: 14px;
+  }
+
+  /* ── CODE VIOLATIONS ── */
+  .violation-block {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  .violation-player {
+    background: rgba(0,0,0,0.25);
+    border: 1px solid var(--grey-dark);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+  .violation-player-name {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    color: var(--grey);
+    margin-bottom: 8px;
+  }
+  .violation-status {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 3px;
+    margin-bottom: 8px;
+  }
+  .vstatus-clean { color: var(--grey); }
+  .vstatus-warning { color: var(--amber); }
+  .vstatus-point { color: var(--red); }
+  .vstatus-game { color: #ff4444; }
+  .violation-btns {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .vbtn {
+    padding: 7px 10px;
+    background: none;
+    border: 1px solid var(--grey-dark);
+    color: var(--grey);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .vbtn:hover { border-color: var(--amber); color: var(--amber); }
+  .vbtn.time-vbtn:hover { border-color: #f5a623; color: #f5a623; }
+  .vbtn.code-vbtn:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── CSV MODAL ── */
+  #csv-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(5,15,10,0.97);
+    z-index: 600;
+    flex-direction: column;
+    padding: 24px 16px;
+    overflow-y: auto;
+  }
+  #csv-modal.show { display: flex; }
+  #csv-modal h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    letter-spacing: 4px;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  #csv-modal .csv-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    color: var(--grey);
+    margin-bottom: 16px;
+  }
+  #csv-toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .csv-action-btn {
+    background: none;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .csv-action-btn:hover { background: var(--accent); color: var(--green); }
+  #close-csv {
+    background: none;
+    border: 1px solid var(--grey-dark);
+    color: var(--grey);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    padding: 8px 16px;
+    cursor: pointer;
+  }
+  #close-csv:hover { border-color: var(--white); color: var(--white); }
+  #csv-table-wrap {
+    overflow-x: auto;
+    flex: 1;
+  }
+  #csv-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+  }
+  #csv-table th {
+    background: rgba(200,245,90,0.08);
+    color: var(--accent);
+    letter-spacing: 2px;
+    padding: 8px 10px;
+    text-align: left;
+    border-bottom: 1px solid rgba(200,245,90,0.2);
+    white-space: nowrap;
+  }
+  #csv-table td {
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: var(--grey);
+    white-space: nowrap;
+  }
+  #csv-table td.td-winner { color: var(--accent); }
+  #csv-table td.td-fault { color: var(--red); }
+  #csv-table td.td-violation { color: var(--amber); }
+  #csv-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* ── VIEW CSV BUTTON on setup ── */
+  #view-csv-btn {
+    background: none;
+    border: 1px solid var(--grey-dark);
+    color: var(--grey);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    padding: 10px 28px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  #view-csv-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  @media (max-width: 500px) {
+    .reason-grid { grid-template-columns: 1fr; }
+    .reason-btn { font-size: 0.7rem; padding: 10px; }
+    #stats-panel { width: 100%; right: -100%; }
+  }
+
+  /* ── TABLET MODE ── */
+  #court-tablet { display: none; }
+  .tablet-mode #court-layout { display: none; }
+  .tablet-mode #court-tablet { display: block; }
+
+  .tablet-scoreboard {
+    display: flex;
+    align-items: stretch;
+    background: rgba(0,0,0,0.3);
+    border-bottom: 1px solid rgba(200,245,90,0.15);
+    padding: 10px 20px;
+    gap: 0;
+  }
+  .tablet-player-score {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 8px 16px;
+    position: relative;
+    transition: background 0.3s;
+  }
+  .tablet-player-score.serving::before {
+    content: '● SERVING';
+    position: absolute;
+    top: 2px; left: 16px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 3px;
+    color: var(--accent);
+  }
+  .tablet-player-score.last-won { background: rgba(200,245,90,0.04); }
+  .tablet-player-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1.2rem, 3vw, 1.8rem);
+    letter-spacing: 3px;
+    color: var(--white);
+    min-width: 80px;
+    padding-top: 14px;
+  }
+  .tablet-point {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.5rem, 6vw, 4rem);
+    line-height: 1;
+    color: var(--accent);
+    text-shadow: 0 0 30px rgba(200,245,90,0.2);
+    min-width: 60px;
+    text-align: center;
+  }
+  .tablet-games {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    color: var(--white);
+    opacity: 0.7;
+    min-width: 30px;
+    text-align: center;
+  }
+  .tablet-sets {
+    display: flex;
+    gap: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--grey);
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .tablet-score-divider {
+    width: 1px;
+    background: rgba(200,245,90,0.15);
+    margin: 4px 8px;
+  }
+
+  .tablet-mid {
+    display: grid;
+    grid-template-columns: 1fr 220px;
+    gap: 0;
+    min-height: 300px;
+  }
+  .tablet-left-col {
+    padding: 16px 20px;
+    border-right: 1px solid rgba(200,245,90,0.08);
+  }
+  .tablet-right-col {
+    padding: 0;
+    background: rgba(0,0,0,0.15);
+  }
+  .tablet-right-col .bottom-section {
+    margin-bottom: 0;
+    padding: 16px;
+    max-width: none;
+  }
+  .tablet-right-col h3 { display: none; }
+  .tablet-right-col .timer-grid { grid-template-columns: repeat(2, 1fr); }
+
+  .tablet-section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 3px;
+    color: var(--grey);
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--grey-dark);
+    padding-bottom: 4px;
+  }
+  .tablet-reasons-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .tablet-reasons-row .reason-btn {
+    flex: 0 0 auto;
+    min-width: 100px;
+  }
+  .tablet-point-btns {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .tablet-point-btns .win-btn {
+    flex: 1;
+    max-width: 220px;
+    margin-top: 0;
+  }
+  .tablet-fault-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .tablet-fault-player-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 2px;
+    color: var(--grey);
+    min-width: 100px;
+  }
+
+  @media (max-width: 820px) {
+    .tablet-mid { grid-template-columns: 1fr; }
+    .tablet-right-col { border-top: 1px solid rgba(200,245,90,0.08); border-right: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="logo">COURT</div>
+  <div class="match-time" id="match-clock">00:00</div>
+  <div id="topbar-timer-pill" onclick="document.getElementById('timers-section').scrollIntoView({behavior:'smooth'})" title="Jump to timers">
+    <div class="pill-time" id="pill-time">0:00</div>
+    <div class="pill-label" id="pill-label">TIMER</div>
+  </div>
+  <button id="stats-toggle" onclick="toggleStats()">STATS ▶</button>
+</div>
+
+<!-- SETUP -->
+<div id="setup-screen">
+  <div>
+    <h1>COURT</h1>
+    <p>TENNIS UMPIRE CONSOLE</p>
+  </div>
+  <div class="setup-fields">
+    <input type="text" id="p1-name" placeholder="PLAYER 1" maxlength="20">
+    <input type="text" id="p2-name" placeholder="PLAYER 2" maxlength="20">
+  </div>
+  <div>
+    <p style="text-align:center;font-size:0.75rem;letter-spacing:2px;color:var(--grey);margin-bottom:10px;">MATCH FORMAT</p>
+    <div class="format-row">
+      <button class="fmt-btn active" data-sets="1">BEST OF 1</button>
+      <button class="fmt-btn" data-sets="3">BEST OF 3</button>
+      <button class="fmt-btn" data-sets="5">BEST OF 5</button>
+    </div>
+  </div>
+  <div>
+    <p style="text-align:center;font-size:0.75rem;letter-spacing:2px;color:var(--grey);margin-bottom:10px;">FINAL SET</p>
+    <div class="format-row">
+      <button class="fmt-btn active" data-finalset="tiebreak">TIEBREAK</button>
+      <button class="fmt-btn" data-finalset="advantage">ADVANTAGE</button>
+      <button class="fmt-btn" data-finalset="supertiebreak">SUPER TIEBREAK</button>
+    </div>
+  </div>
+  <div>
+    <p style="text-align:center;font-size:0.75rem;letter-spacing:2px;color:var(--grey);margin-bottom:10px;">VIEW MODE</p>
+    <div class="format-row">
+      <button class="fmt-btn active" data-viewmode="default">DEFAULT</button>
+      <button class="fmt-btn" data-viewmode="tablet">TABLET</button>
+    </div>
+  </div>
+  <div>
+    <p style="text-align:center;font-size:0.75rem;letter-spacing:2px;color:var(--grey);margin-bottom:10px;">FIRST SERVE</p>
+    <div class="format-row">
+      <button class="fmt-btn active" data-serve="0" id="serve-btn-0">PLAYER 1</button>
+      <button class="fmt-btn" data-serve="1" id="serve-btn-1">PLAYER 2</button>
+    </div>
+  </div>
+  <button id="start-btn" onclick="startMatch()">START MATCH</button>
+  <button id="view-csv-btn" onclick="openCSV()">VIEW MATCH CSV</button>
+</div>
+
+<!-- COURT -->
+<div id="court-screen">
+  <div id="court-layout">
+    <!-- Player 1 -->
+    <div class="player-panel serving" id="panel-0">
+      <div class="player-name" id="display-name-0">PLAYER 1</div>
+      <div class="score-block">
+        <div class="point-score" id="point-0">0</div>
+        <div class="games-score" id="games-0">0</div>
+        <div class="sets-row" id="sets-0"></div>
+      </div>
+      <div class="reason-grid" id="reasons-0">
+        <button class="reason-btn" onclick="selectReason(0,'winner')">WINNER</button>
+        <button class="reason-btn" onclick="selectReason(0,'forced')">FORCED<br>ERROR OPP</button>
+        <button class="reason-btn" onclick="selectReason(0,'unforced')">UNFORCED<br>ERROR OPP</button>
+        <button class="reason-btn" onclick="selectReason(0,'ace')">ACE</button>
+        <button class="reason-btn" onclick="selectReason(0,'doublefault')">DBL FAULT<br>OPP</button>
+        <button class="reason-btn" onclick="selectReason(0,'other')">OTHER</button>
+      </div>
+      <div class="fault-indicator" id="fault-indicator-0"></div>
+      <div class="fault-row">
+        <button class="fault-btn" onclick="logFault(0,'fault')">FAULT</button>
+        <button class="fault-btn" onclick="logFault(0,'doublefault')">DBL FAULT</button>
+      </div>
+      <button class="win-btn" id="win-btn-0" onclick="awardPoint(0)">POINT → P1</button>
+    </div>
+
+    <!-- Player 2 -->
+    <div class="player-panel" id="panel-1">
+      <div class="player-name" id="display-name-1">PLAYER 2</div>
+      <div class="score-block">
+        <div class="point-score" id="point-1">0</div>
+        <div class="games-score" id="games-1">0</div>
+        <div class="sets-row" id="sets-1"></div>
+      </div>
+      <div class="reason-grid" id="reasons-1">
+        <button class="reason-btn" onclick="selectReason(1,'winner')">WINNER</button>
+        <button class="reason-btn" onclick="selectReason(1,'forced')">FORCED<br>ERROR OPP</button>
+        <button class="reason-btn" onclick="selectReason(1,'unforced')">UNFORCED<br>ERROR OPP</button>
+        <button class="reason-btn" onclick="selectReason(1,'ace')">ACE</button>
+        <button class="reason-btn" onclick="selectReason(1,'doublefault')">DBL FAULT<br>OPP</button>
+        <button class="reason-btn" onclick="selectReason(1,'other')">OTHER</button>
+      </div>
+      <div class="fault-indicator" id="fault-indicator-1"></div>
+      <div class="fault-row">
+        <button class="fault-btn" onclick="logFault(1,'fault')">FAULT</button>
+        <button class="fault-btn" onclick="logFault(1,'doublefault')">DBL FAULT</button>
+      </div>
+      <button class="win-btn" id="win-btn-1" onclick="awardPoint(1)">POINT → P2</button>
+    </div>
+  </div>
+
+  <!-- TABLET COURT -->
+  <div id="court-tablet">
+    <div class="tablet-scoreboard">
+      <div class="tablet-player-score" id="tablet-player-0">
+        <div class="tablet-player-name" id="tablet-name-0">PLAYER 1</div>
+        <div class="tablet-point" id="tablet-point-0">0</div>
+        <div class="tablet-games" id="tablet-games-0">0</div>
+        <div class="tablet-sets" id="tablet-sets-0"></div>
+      </div>
+      <div class="tablet-score-divider"></div>
+      <div class="tablet-player-score" id="tablet-player-1">
+        <div class="tablet-player-name" id="tablet-name-1">PLAYER 2</div>
+        <div class="tablet-point" id="tablet-point-1">0</div>
+        <div class="tablet-games" id="tablet-games-1">0</div>
+        <div class="tablet-sets" id="tablet-sets-1"></div>
+      </div>
+    </div>
+    <div class="tablet-mid">
+      <div class="tablet-left-col">
+        <div class="tablet-section-label">REASON FOR POINT</div>
+        <div id="tablet-reasons">
+          <div class="tablet-reasons-row">
+            <button class="reason-btn" onclick="selectSharedReason('winner',this)">WINNER</button>
+            <button class="reason-btn" onclick="selectSharedReason('forced',this)">FORCED<br>ERROR OPP</button>
+            <button class="reason-btn" onclick="selectSharedReason('unforced',this)">UNFORCED<br>ERROR OPP</button>
+            <button class="reason-btn" onclick="selectSharedReason('ace',this)">ACE</button>
+            <button class="reason-btn" onclick="selectSharedReason('doublefault',this)">DBL FAULT<br>OPP</button>
+            <button class="reason-btn" onclick="selectSharedReason('other',this)">OTHER</button>
+          </div>
+          <div class="tablet-point-btns">
+            <button class="win-btn" id="tablet-win-btn-0" onclick="awardTablet(0)">POINT → P1</button>
+            <button class="win-btn" id="tablet-win-btn-1" onclick="awardTablet(1)">POINT → P2</button>
+          </div>
+        </div>
+        <div class="tablet-section-label" style="margin-top:16px">FAULTS</div>
+        <div class="tablet-fault-row">
+          <span class="tablet-fault-player-label" id="tablet-fault-name-0">PLAYER 1</span>
+          <div class="fault-indicator" id="tablet-fault-ind-0"></div>
+          <button class="fault-btn" onclick="logFault(0,'fault')">FAULT</button>
+          <button class="fault-btn" onclick="logFault(0,'doublefault')">DBL FAULT</button>
+        </div>
+        <div class="tablet-fault-row">
+          <span class="tablet-fault-player-label" id="tablet-fault-name-1">PLAYER 2</span>
+          <div class="fault-indicator" id="tablet-fault-ind-1"></div>
+          <button class="fault-btn" onclick="logFault(1,'fault')">FAULT</button>
+          <button class="fault-btn" onclick="logFault(1,'doublefault')">DBL FAULT</button>
+        </div>
+      </div>
+      <div class="tablet-right-col" id="tablet-timers-slot">
+        <!-- #timers-section is moved here when tablet mode is active -->
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM CONTROLS -->
+  <div id="bottom-controls">
+
+    <!-- TIMERS -->
+    <div class="bottom-section" id="timers-section">
+      <h3>TIMERS</h3>
+      <div class="timer-grid">
+        <button class="timer-preset" onclick="startTimer(20,'SERVE')">20s<br><span style="font-size:0.55rem;color:var(--grey)">SERVE</span></button>
+        <button class="timer-preset" onclick="startTimer(25,'SERVE')">25s<br><span style="font-size:0.55rem;color:var(--grey)">SERVE</span></button>
+        <button class="timer-preset" onclick="startTimer(30,'CHANGEOVER')">30s</button>
+        <button class="timer-preset" onclick="startTimer(60,'CHANGEOVER')">60s<br><span style="font-size:0.55rem;color:var(--grey)">CHANGE</span></button>
+        <button class="timer-preset" onclick="startTimer(90,'CHANGEOVER')">90s<br><span style="font-size:0.55rem;color:var(--grey)">CHANGE</span></button>
+        <button class="timer-preset" onclick="startTimer(120,'MED TIMEOUT')">120s<br><span style="font-size:0.55rem;color:var(--grey)">MEDICAL</span></button>
+      </div>
+      <div class="timer-action-row" id="timer-action-row">
+        <button id="pause-timer" onclick="pauseResumeTimer()">❙❙ PAUSE</button>
+        <button id="stop-timer" onclick="stopTimer()">■ STOP</button>
+      </div>
+    </div>
+
+    <!-- GIVE SET -->
+    <div class="bottom-section">
+      <h3>GIVE SET TO</h3>
+      <div class="giveset-row">
+        <button class="giveset-btn" id="giveset-0" onclick="giveSet(0)">— P1</button>
+        <button class="giveset-btn" id="giveset-1" onclick="giveSet(1)">— P2</button>
+      </div>
+    </div>
+
+    <!-- START TIEBREAK -->
+    <div class="bottom-section">
+      <h3>START TIEBREAK NOW</h3>
+      <div class="tb-row">
+        <button class="tb-btn" id="tb-7" onclick="forceTiebreak(7)">7 PTS</button>
+        <button class="tb-btn" id="tb-10" onclick="forceTiebreak(10)">10 PTS</button>
+        <button class="tb-btn" id="tb-11" onclick="forceTiebreak(11)">11 PTS</button>
+      </div>
+      <div id="tb-note">only available at 0-0</div>
+    </div>
+
+    <!-- CODE & TIME VIOLATIONS -->
+    <div class="bottom-section">
+      <h3>VIOLATIONS</h3>
+      <div class="violation-block">
+        <div class="violation-player" id="violation-block-0">
+          <div class="violation-player-name" id="vname-0">PLAYER 1</div>
+          <div class="violation-status vstatus-clean" id="vtime-0">TIME: CLEAN</div>
+          <div class="violation-status vstatus-clean" id="vcode-0">CODE: CLEAN</div>
+          <div class="violation-btns">
+            <button class="vbtn time-vbtn" onclick="addViolation(0,'time')">+ TIME</button>
+            <button class="vbtn code-vbtn" onclick="addViolation(0,'code')">+ CODE</button>
+            <button class="vbtn" onclick="addViolation(0,'warning')" style="border-color:#f5a623;color:#f5a623">WARN</button>
+            <button class="vbtn" onclick="addViolation(0,'point')" style="border-color:var(--red);color:var(--red)">POINT PEN</button>
+            <button class="vbtn" onclick="addViolation(0,'game')" style="border-color:#ff4444;color:#ff4444">GAME PEN</button>
+          </div>
+        </div>
+        <div class="violation-player" id="violation-block-1">
+          <div class="violation-player-name" id="vname-1">PLAYER 2</div>
+          <div class="violation-status vstatus-clean" id="vtime-1">TIME: CLEAN</div>
+          <div class="violation-status vstatus-clean" id="vcode-1">CODE: CLEAN</div>
+          <div class="violation-btns">
+            <button class="vbtn time-vbtn" onclick="addViolation(1,'time')">+ TIME</button>
+            <button class="vbtn code-vbtn" onclick="addViolation(1,'code')">+ CODE</button>
+            <button class="vbtn" onclick="addViolation(1,'warning')" style="border-color:#f5a623;color:#f5a623">WARN</button>
+            <button class="vbtn" onclick="addViolation(1,'point')" style="border-color:var(--red);color:var(--red)">POINT PEN</button>
+            <button class="vbtn" onclick="addViolation(1,'game')" style="border-color:#ff4444;color:#ff4444">GAME PEN</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UNDO -->
+    <div class="bottom-section" style="margin-bottom:0">
+      <h3>ACTIONS</h3>
+      <button id="undo-btn" onclick="undoAction()">↩ UNDO LAST ACTION</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- FLASH -->
+<div id="flash"></div>
+
+<!-- BANNER -->
+<div id="banner">
+  <h2 id="banner-sub">GAME</h2>
+  <div class="banner-name" id="banner-name"></div>
+</div>
+
+<!-- STATS PANEL -->
+<div id="overlay" onclick="toggleStats()"></div>
+<div id="stats-panel">
+  <button id="close-stats" onclick="toggleStats()">✕</button>
+  <h2>STATS</h2>
+  <div class="sub" id="stats-match-label">LIVE MATCH</div>
+  <div id="stats-content"></div>
+  <div class="log-section">
+    <div class="stat-section">
+      <h4>POINT LOG</h4>
+      <div id="point-log"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MATCH OVER -->
+<div id="match-over">
+  <div class="winner-label">MATCH WINNER</div>
+  <h1 id="final-winner"></h1>
+  <div class="final-score" id="final-score"></div>
+  <div id="final-stats-content" style="width:100%;max-width:400px;margin-top:16px;"></div>
+  <button id="new-match-btn" onclick="resetAll()">NEW MATCH</button>
+</div>
+
+<!-- CSV MODAL -->
+<div id="csv-modal">
+  <h2>MATCH LOG</h2>
+  <div class="csv-sub" id="csv-modal-sub">POINT BY POINT · FAULT BY FAULT</div>
+  <div id="csv-toolbar">
+    <button class="csv-action-btn" onclick="downloadCSV()">↓ DOWNLOAD CSV</button>
+    <button id="close-csv" onclick="closeCSV()">✕ CLOSE</button>
+  </div>
+  <div id="csv-table-wrap">
+    <table id="csv-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>TYPE</th>
+          <th>SET</th>
+          <th>GAME</th>
+          <th>SCORE</th>
+          <th>PLAYER</th>
+          <th>DETAIL</th>
+        </tr>
+      </thead>
+      <tbody id="csv-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const POINT_SEQ = ['0','15','30','40','A'];
+let state = {
+  names: ['PLAYER 1','PLAYER 2'],
+  points: [0,0],
+  games: [0,0],
+  sets: [[],[]],
+  tbScores: [],       // per completed set: [tb0, tb1] if decided by tiebreak, else null
+  setsWon: [0,0],
+  serving: 0,
+  deuce: false,
+  advantage: -1,
+  isTiebreak: false,
+  tbPoints: [0,0],
+  matchSets: 1,
+  finalSetRule: 'tiebreak',
+  matchOver: false,
+  forcedTbTarget: null,
+  viewMode: 'default',
+  history: [],
+  pointLog: [],
+  eventLog: [],       // unified log for CSV: points, faults, violations
+  pendingReason: [null, null],
+  faults: [0, 0],     // current serve faults (resets after point)
+  violations: [
+    { timeCount: 0, codeCount: 0, timeLevel: 'clean', codeLevel: 'clean' },
+    { timeCount: 0, codeCount: 0, timeLevel: 'clean', codeLevel: 'clean' }
+  ],
+  stats: {
+    winners: [0,0],
+    forcedErrors: [0,0],
+    unforcedErrors: [0,0],
+    aces: [0,0],
+    doubleFaults: [0,0],
+    totalPoints: [0,0],
+    faults: [0,0],
+    doubleFaultsServed: [0,0],
+  }
+};
+
+// ─── FORMAT BUTTONS ───────────────────────────────────────────────────────────
+document.querySelectorAll('[data-sets]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-sets]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+document.querySelectorAll('[data-finalset]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-finalset]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+document.querySelectorAll('[data-viewmode]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-viewmode]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+document.querySelectorAll('[data-serve]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-serve]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+// Keep first-serve button labels in sync with the entered player names
+['0','1'].forEach(i => {
+  const input = document.getElementById('p' + (Number(i)+1) + '-name');
+  const label = document.getElementById('serve-btn-' + i);
+  if (input && label) {
+    input.addEventListener('input', () => {
+      label.textContent = input.value.trim().toUpperCase() || ('PLAYER ' + (Number(i)+1));
+    });
+  }
+});
+
+// ─── TIMER ────────────────────────────────────────────────────────────────────
+let timerInterval = null;
+let timerRemaining = 0;
+let timerPaused = false;
+let timerPanelOpen = false;
+
+// Audio context for alarm
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function playAlarm() {
+  try {
+    const ctx = getAudioCtx();
+    const beepCount = 3;
+    for (let i = 0; i < beepCount; i++) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = i === beepCount-1 ? 880 : 660;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.5, ctx.currentTime + i*0.35);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i*0.35 + 0.3);
+      osc.start(ctx.currentTime + i*0.35);
+      osc.stop(ctx.currentTime + i*0.35 + 0.3);
+    }
+  } catch(e) {}
+}
+
+function startTimer(seconds, label) {
+  stopTimer();
+  timerRemaining = seconds;
+  timerPaused = false;
+  const pill = document.getElementById('topbar-timer-pill');
+  const pillLabel = document.getElementById('pill-label');
+  pill.classList.add('visible');
+  pillLabel.textContent = label;
+  document.getElementById('timer-action-row').classList.add('visible');
+  document.getElementById('pause-timer').textContent = '❙❙ PAUSE';
+  updateTimerDisplay();
+  timerInterval = setInterval(() => {
+    if (timerPaused) return;
+    timerRemaining--;
+    updateTimerDisplay();
+    if (timerRemaining <= 0) {
+      stopTimer();
+      playAlarm();
+      const pillTime = document.getElementById('pill-time');
+      pillTime.textContent = 'TIME';
+      pillTime.classList.add('danger');
+      setTimeout(() => {
+        pillTime.classList.remove('danger');
+        document.getElementById('topbar-timer-pill').classList.remove('visible');
+        document.getElementById('timer-action-row').classList.remove('visible');
+      }, 3000);
+    }
+  }, 1000);
+}
+function updateTimerDisplay() {
+  const pillTime = document.getElementById('pill-time');
+  const mins = Math.floor(timerRemaining/60);
+  const secs = timerRemaining % 60;
+  pillTime.textContent = mins + ':' + String(secs).padStart(2,'0');
+  pillTime.classList.remove('warning','danger');
+  if (timerRemaining <= 5) pillTime.classList.add('danger');
+  else if (timerRemaining <= 15) pillTime.classList.add('warning');
+}
+function pauseResumeTimer() {
+  if (!timerInterval) return;
+  timerPaused = !timerPaused;
+  const btn = document.getElementById('pause-timer');
+  const pill = document.getElementById('topbar-timer-pill');
+  if (timerPaused) {
+    btn.textContent = '▶ RESUME';
+    pill.style.opacity = '0.5';
+  } else {
+    btn.textContent = '❙❙ PAUSE';
+    pill.style.opacity = '';
+  }
+}
+function stopTimer() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  timerPaused = false;
+  const pillTime = document.getElementById('pill-time');
+  pillTime.classList.remove('warning','danger');
+  document.getElementById('topbar-timer-pill').classList.remove('visible');
+  document.getElementById('topbar-timer-pill').style.opacity = '';
+  const row = document.getElementById('timer-action-row');
+  if (row) row.classList.remove('visible');
+}
+
+function toggleTimerPanel() {
+  // now just scrolls - kept for any legacy calls
+  document.getElementById('timers-section').scrollIntoView({behavior:'smooth'});
+}
+
+// ─── MATCH CLOCK ──────────────────────────────────────────────────────────────
+let matchStart = null;
+let clockInterval = null;
+function startClock() {
+  matchStart = Date.now();
+  clockInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - matchStart) / 1000);
+    const m = Math.floor(elapsed/60);
+    const s = elapsed % 60;
+    document.getElementById('match-clock').textContent =
+      String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  }, 1000);
+}
+
+// ─── SETUP ────────────────────────────────────────────────────────────────────
+function startMatch() {
+  const p1 = document.getElementById('p1-name').value.trim().toUpperCase() || 'PLAYER 1';
+  const p2 = document.getElementById('p2-name').value.trim().toUpperCase() || 'PLAYER 2';
+  const setsBtn = document.querySelector('[data-sets].active');
+  const finalBtn = document.querySelector('[data-finalset].active');
+  const viewBtn = document.querySelector('[data-viewmode].active');
+  const serveBtn = document.querySelector('[data-serve].active');
+  const totalSets = setsBtn ? parseInt(setsBtn.dataset.sets) : 3;
+  const setsToWin = Math.ceil(totalSets/2);
+
+  state.names = [p1, p2];
+  state.matchSets = setsToWin;
+  state.finalSetRule = finalBtn ? finalBtn.dataset.finalset : 'tiebreak';
+  state.viewMode = viewBtn ? viewBtn.dataset.viewmode : 'default';
+  state.serving = serveBtn ? parseInt(serveBtn.dataset.serve) : 0;
+
+  updatePlayerNames();
+  applyViewMode();
+
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('court-screen').style.display = 'block';
+
+  startClock();
+  updateDisplay();
+  updateViolationDisplay();
+}
+
+// ─── REASON SELECT ────────────────────────────────────────────────────────────
+function selectReason(player, reason) {
+  state.pendingReason[player] = reason;
+  document.querySelectorAll(`#reasons-${player} .reason-btn`).forEach(b => b.classList.remove('selected'));
+  event.target.closest('.reason-btn').classList.add('selected');
+}
+
+// ─── TABLET MODE ──────────────────────────────────────────────────────────────
+let sharedReason = null;
+function selectSharedReason(reason, btn) {
+  sharedReason = reason;
+  document.querySelectorAll('#tablet-reasons .reason-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+}
+function awardTablet(winner) {
+  if (sharedReason) state.pendingReason[winner] = sharedReason;
+  awardPoint(winner);
+  sharedReason = null;
+}
+function updatePlayerNames() {
+  const [p1, p2] = state.names;
+  document.getElementById('display-name-0').textContent = p1;
+  document.getElementById('display-name-1').textContent = p2;
+  document.getElementById('win-btn-0').textContent = 'POINT → ' + p1;
+  document.getElementById('win-btn-1').textContent = 'POINT → ' + p2;
+  const tn0 = document.getElementById('tablet-name-0');
+  const tn1 = document.getElementById('tablet-name-1');
+  const tfn0 = document.getElementById('tablet-fault-name-0');
+  const tfn1 = document.getElementById('tablet-fault-name-1');
+  const twb0 = document.getElementById('tablet-win-btn-0');
+  const twb1 = document.getElementById('tablet-win-btn-1');
+  if (tn0) tn0.textContent = p1;
+  if (tn1) tn1.textContent = p2;
+  if (tfn0) tfn0.textContent = p1;
+  if (tfn1) tfn1.textContent = p2;
+  if (twb0) twb0.textContent = 'POINT → ' + p1;
+  if (twb1) twb1.textContent = 'POINT → ' + p2;
+}
+function applyViewMode() {
+  const tablet = state.viewMode === 'tablet';
+  document.body.classList.toggle('tablet-mode', tablet);
+  if (tablet) {
+    const slot = document.getElementById('tablet-timers-slot');
+    const timers = document.getElementById('timers-section');
+    if (slot && timers && timers.parentNode !== slot) {
+      slot.appendChild(timers);
+    }
+  }
+}
+
+function saveSnapshot() {
+  return JSON.parse(JSON.stringify({
+    points: state.points, games: state.games, sets: state.sets, tbScores: state.tbScores,
+    setsWon: state.setsWon, serving: state.serving, deuce: state.deuce,
+    advantage: state.advantage, isTiebreak: state.isTiebreak, tbPoints: state.tbPoints,
+    forcedTbTarget: state.forcedTbTarget,
+    stats: state.stats, pointLog: state.pointLog, eventLog: state.eventLog,
+    faults: state.faults, violations: state.violations,
+  }));
+}
+function restoreSnapshot(snap) {
+  Object.assign(state, snap);
+  updateDisplay();
+  updateStats();
+  updateViolationDisplay();
+}
+
+// ─── SCORING ─────────────────────────────────────────────────────────────────
+function awardPoint(winner) {
+  if (state.matchOver) return;
+
+  state.history.push(saveSnapshot());
+  if (state.history.length > 100) state.history.shift();
+
+  const reason = state.pendingReason[winner] || 'other';
+  const reasonLabels = {
+    winner: 'Winner', forced: 'Forced error', unforced: 'Unforced error',
+    ace: 'Ace', doublefault: 'Double fault', other: 'Point'
+  };
+
+  state.stats.totalPoints[winner]++;
+  if (reason === 'winner') state.stats.winners[winner]++;
+  else if (reason === 'forced') state.stats.forcedErrors[winner]++;
+  else if (reason === 'unforced') state.stats.unforcedErrors[winner]++;
+  else if (reason === 'ace') { state.stats.aces[winner]++; state.stats.winners[winner]++; }
+  else if (reason === 'doublefault') state.stats.doubleFaults[winner]++;
+
+  const setNum = state.sets[0].length + 1;
+  const gNum = state.games[0] + state.games[1] + 1;
+  const scoreStr = currentScoreStr();
+  const entry = {
+    type: 'POINT', winner, reason: reasonLabels[reason],
+    name: state.names[winner], set: setNum, game: gNum, score: scoreStr
+  };
+  state.pointLog.unshift(entry);
+  state.eventLog.push(entry);
+  if (state.pointLog.length > 200) state.pointLog.pop();
+
+  // Reset faults after point
+  state.faults = [0, 0];
+  updateFaultIndicators();
+
+  const flash = document.getElementById('flash');
+  flash.style.background = 'rgba(200,245,90,0.3)';
+  flash.classList.remove('show');
+  void flash.offsetWidth;
+  flash.classList.add('show');
+
+  if (state.isTiebreak) scoreTiebreakPoint(winner);
+  else scoreRegularPoint(winner);
+
+  state.pendingReason = [null, null];
+  document.querySelectorAll('.reason-btn').forEach(b => b.classList.remove('selected'));
+
+  updateDisplay();
+  updateStats();
+}
+
+function scoreRegularPoint(winner) {
+  const loser = 1 - winner;
+  if (state.deuce) {
+    if (state.advantage === winner) { winGame(winner); }
+    else if (state.advantage === loser) { state.advantage = -1; }
+    else { state.advantage = winner; }
+    return;
+  }
+  if (state.points[winner] < 3) {
+    state.points[winner]++;
+  } else if (state.points[winner] === 3 && state.points[loser] < 3) {
+    winGame(winner);
+  } else if (state.points[winner] === 3 && state.points[loser] === 3) {
+    state.deuce = true;
+    state.advantage = winner;
+  }
+}
+
+function scoreTiebreakPoint(winner) {
+  state.tbPoints[winner]++;
+  const loser = 1 - winner;
+  const w = state.tbPoints[winner], l = state.tbPoints[loser];
+  // Use forcedTbTarget if set, else fall back to normal logic
+  let target;
+  if (state.forcedTbTarget) {
+    target = state.forcedTbTarget;
+  } else {
+    target = state.finalSetRule === 'supertiebreak' ? 10 : 7;
+  }
+  if (w >= target && w - l >= 2) {
+    winSet(winner);
+    return;
+  }
+  // Change serve: first after 1, then every 2
+  const total = w + l;
+  if (total === 1 || (total > 1 && total % 2 === 1)) {
+    state.serving = 1 - state.serving;
+  }
+}
+
+function winGame(winner) {
+  state.points = [0,0];
+  state.deuce = false;
+  state.advantage = -1;
+  state.games[winner]++;
+
+  // Check set win
+  const loser = 1 - winner;
+  const wg = state.games[winner], lg = state.games[loser];
+  const isFinalSet = state.setsWon[0] + state.setsWon[1] === (state.matchSets * 2 - 2);
+  const finalSetAdvantage = isFinalSet && state.finalSetRule === 'advantage';
+
+  if (wg >= 6) {
+    if (wg - lg >= 2) { winSet(winner); return; }
+    if (wg === 7) { winSet(winner); return; }
+    if (wg === 6 && lg === 6) {
+      if (finalSetAdvantage) {
+        // keep playing
+      } else if (isFinalSet && state.finalSetRule === 'supertiebreak') {
+        startTiebreak(winner, true);
+      } else {
+        startTiebreak(winner, false);
+      }
+    }
+  }
+
+  // Change serve after each game
+  state.serving = 1 - state.serving;
+  showBanner('GAME', state.names[winner]);
+}
+
+function startTiebreak(winner, isSuper) {
+  state.isTiebreak = true;
+  state.tbPoints = [0,0];
+}
+
+function winSet(winner) {
+  const g0 = state.games[0], g1 = state.games[1];
+  if (state.isTiebreak) {
+    // Set score is games with the tiebreak winner taking one more game (e.g. 7-6);
+    // the tiebreak points are kept separately for display like 7(7)-6(4)
+    state.sets[0].push(winner === 0 ? g0 + 1 : g0);
+    state.sets[1].push(winner === 1 ? g1 + 1 : g1);
+    state.tbScores.push([state.tbPoints[0], state.tbPoints[1]]);
+  } else {
+    state.sets[0].push(g0);
+    state.sets[1].push(g1);
+    state.tbScores.push(null);
+  }
+  state.setsWon[winner]++;
+  state.games = [0,0];
+  state.points = [0,0];
+  state.deuce = false;
+  state.advantage = -1;
+  state.isTiebreak = false;
+  state.tbPoints = [0,0];
+  state.serving = 1 - state.serving;
+
+  if (state.setsWon[winner] >= state.matchSets) {
+    state.matchOver = true;
+    showBanner('SET', state.names[winner]);
+    setTimeout(() => showMatchOver(winner), 1800);
+  } else {
+    showBanner('SET', state.names[winner]);
+  }
+}
+
+// ─── MANUAL SET / TIEBREAK OVERRIDES ─────────────────────────────────────────
+function giveSet(winner) {
+  if (state.matchOver) return;
+  state.history.push(saveSnapshot());
+  const g0 = state.isTiebreak ? (winner === 0 ? state.games[0] + 1 : state.games[0]) : state.games[0];
+  const g1 = state.isTiebreak ? (winner === 1 ? state.games[1] + 1 : state.games[1]) : state.games[1];
+  state.sets[0].push(g0);
+  state.sets[1].push(g1);
+  state.tbScores.push(state.isTiebreak ? [state.tbPoints[0], state.tbPoints[1]] : null);
+  state.setsWon[winner]++;
+  state.games = [0,0];
+  state.points = [0,0];
+  state.deuce = false;
+  state.advantage = -1;
+  state.isTiebreak = false;
+  state.tbPoints = [0,0];
+  state.forcedTbTarget = null;
+  state.faults = [0,0];
+  updateFaultIndicators();
+  state.eventLog.push({ type: 'SET GIVEN', name: state.names[winner], set: state.sets[0].length, game: '-', score: g0+'-'+g1, winner, reason: 'Set given manually' });
+  if (state.setsWon[winner] >= state.matchSets) {
+    state.matchOver = true;
+    showBanner('SET', state.names[winner]);
+    setTimeout(() => showMatchOver(winner), 1800);
+  } else {
+    showBanner('SET', state.names[winner]);
+  }
+  updateDisplay();
+  updateStats();
+}
+
+function forceTiebreak(target) {
+  if (state.matchOver) return;
+  if (state.games[0] !== 0 || state.games[1] !== 0) return;
+  state.history.push(saveSnapshot());
+  state.isTiebreak = true;
+  state.tbPoints = [0,0];
+  state.forcedTbTarget = target;
+  state.eventLog.push({ type: 'TIEBREAK', name: target+'pt tiebreak', set: state.sets[0].length+1, game: '-', score: '-', winner: -1, reason: 'Forced tiebreak' });
+  updateDisplay();
+  updateStats();
+  showBanner('TIEBREAK', target + ' PTS');
+}
+
+// ─── FAULTS ───────────────────────────────────────────────────────────────────
+function logFault(player, type) {
+  if (state.matchOver) return;
+  state.history.push(saveSnapshot());
+  const setNum = state.sets[0].length + 1;
+  const gNum = state.games[0] + state.games[1] + 1;
+  const score = currentScoreStr();
+  if (type === 'fault') {
+    state.faults[player]++;
+    state.stats.faults[player]++;
+    const label = state.faults[player] === 1 ? '1st Fault' : '2nd Fault';
+    state.eventLog.push({ type: 'FAULT', name: state.names[player], set: setNum, game: gNum, score, winner: player, reason: label });
+    updateFaultIndicators();
+    updateDisplay();
+  } else {
+    // double fault
+    state.stats.doubleFaultsServed[player]++;
+    state.eventLog.push({ type: 'DOUBLE FAULT', name: state.names[player], set: setNum, game: gNum, score, winner: player, reason: 'Double fault — point to opponent' });
+    state.faults = [0,0];
+    awardPointSilent(1 - player, 'Double fault (opponent)');
+  }
+}
+
+function updateFaultIndicators() {
+  for (let p = 0; p < 2; p++) {
+    const text = state.faults[p] === 1 ? '● FAULT' : (state.faults[p] >= 2 ? '●● DOUBLE FAULT' : '');
+    const color = state.faults[p] >= 2 ? 'var(--red)' : 'var(--amber)';
+    const el = document.getElementById('fault-indicator-' + p);
+    if (el) { el.textContent = text; if (text) el.style.color = color; }
+    const tEl = document.getElementById('tablet-fault-ind-' + p);
+    if (tEl) { tEl.textContent = text; if (text) tEl.style.color = color; }
+  }
+}
+
+function awardPointSilent(winner, reason) {
+  state.stats.totalPoints[winner]++;
+  const setNum = state.sets[0].length + 1;
+  const gNum = state.games[0] + state.games[1] + 1;
+  const scoreStr = currentScoreStr();
+  const entry = { type: 'POINT', winner, reason, name: state.names[winner], set: setNum, game: gNum, score: scoreStr };
+  state.pointLog.unshift(entry);
+  state.eventLog.push(entry);
+  if (state.isTiebreak) scoreTiebreakPoint(winner);
+  else scoreRegularPoint(winner);
+  state.faults = [0,0];
+  updateFaultIndicators();
+  updateDisplay();
+  updateStats();
+}
+
+// ─── VIOLATIONS ───────────────────────────────────────────────────────────────
+const VIOLATION_LABELS = { clean:'CLEAN', warning:'WARNING', point:'POINT', game:'GAME PEN', default:'DEFAULT' };
+const VIOLATION_CLASSES = { clean:'vstatus-clean', warning:'vstatus-warning', point:'vstatus-point', game:'vstatus-game', default:'vstatus-game' };
+
+function violationOutcome(level) {
+  // returns what penalty to apply at this level
+  if (level === 'point') return 'point';
+  if (level === 'game') return 'game';
+  if (level === 'default') return 'default';
+  return null;
+}
+
+function addViolation(player, type) {
+  if (state.matchOver) return;
+  state.history.push(saveSnapshot());
+  const setNum = state.sets[0].length + 1;
+  const gNum = state.games[0] + state.games[1] + 1;
+  const score = currentScoreStr();
+  const v = state.violations[player];
+  let level, detail, penalty;
+
+  if (type === 'time') {
+    v.timeCount++;
+    // Time: 1st = warning, every subsequent = point penalty
+    if (v.timeCount === 1) level = 'warning';
+    else level = 'point';
+    v.timeLevel = level;
+    detail = 'Time violation #' + v.timeCount;
+    penalty = violationOutcome(level);
+
+  } else if (type === 'code') {
+    v.codeCount++;
+    // Code: 1st = warning, 2nd = point, 3rd = game, 4th+ = default
+    if (v.codeCount === 1) level = 'warning';
+    else if (v.codeCount === 2) level = 'point';
+    else if (v.codeCount === 3) level = 'game';
+    else level = 'default';
+    v.codeLevel = level;
+    detail = 'Code violation #' + v.codeCount;
+    penalty = violationOutcome(level);
+
+  } else if (type === 'warning') {
+    // Manual warning — applies to code ladder
+    v.codeCount = Math.max(v.codeCount, 1);
+    v.codeLevel = 'warning';
+    level = 'warning'; detail = 'Warning (manual)'; penalty = null;
+
+  } else if (type === 'point') {
+    v.codeLevel = 'point';
+    level = 'point'; detail = 'Point penalty (manual)'; penalty = 'point';
+
+  } else if (type === 'game') {
+    v.codeLevel = 'game';
+    level = 'game'; detail = 'Game penalty (manual)'; penalty = 'game';
+  }
+
+  state.eventLog.push({ type: 'VIOLATION', name: state.names[player], set: setNum, game: gNum, score, winner: player, reason: detail + ' → ' + VIOLATION_LABELS[level] });
+  updateViolationDisplay();
+
+  if (penalty === 'point') {
+    showBanner('POINT PENALTY', state.names[player]);
+    setTimeout(() => awardPointSilent(1-player, 'Violation penalty point'), 800);
+  } else if (penalty === 'game') {
+    showBanner('GAME PENALTY', state.names[player]);
+    setTimeout(() => {
+      state.games[1-player]++;
+      const wg = state.games[1-player], lg = state.games[player];
+      if (wg >= 6 && wg - lg >= 2) winSet(1-player);
+      updateDisplay(); updateStats();
+    }, 800);
+  } else if (penalty === 'default') {
+    showBanner('DEFAULTED', state.names[player]);
+    setTimeout(() => showMatchOver(1-player), 1800);
+  } else {
+    showBanner('VIOLATION', VIOLATION_LABELS[level]);
+  }
+}
+
+function updateViolationDisplay() {
+  for (let p = 0; p < 2; p++) {
+    const v = state.violations[p];
+    const nameEl = document.getElementById('vname-' + p);
+    const timeEl = document.getElementById('vtime-' + p);
+    const codeEl = document.getElementById('vcode-' + p);
+    if (nameEl) nameEl.textContent = state.names[p];
+    if (timeEl) {
+      timeEl.textContent = 'TIME: ' + VIOLATION_LABELS[v.timeLevel] + (v.timeCount ? ' (#'+v.timeCount+')' : '');
+      timeEl.className = 'violation-status ' + VIOLATION_CLASSES[v.timeLevel];
+    }
+    if (codeEl) {
+      codeEl.textContent = 'CODE: ' + VIOLATION_LABELS[v.codeLevel] + (v.codeCount ? ' (#'+v.codeCount+')' : '');
+      codeEl.className = 'violation-status ' + VIOLATION_CLASSES[v.codeLevel];
+    }
+  }
+}
+
+// ─── UNDO (unified) ───────────────────────────────────────────────────────────
+function undoAction() {
+  if (state.history.length === 0) return;
+  const prev = state.history.pop();
+  restoreSnapshot(prev);
+  updateFaultIndicators();
+  updateViolationDisplay();
+}
+
+// ─── CSV ──────────────────────────────────────────────────────────────────────
+function currentScoreStr() {
+  if (state.isTiebreak) return state.tbPoints[0] + '-' + state.tbPoints[1] + ' TB';
+  const p0 = state.deuce ? (state.advantage === 0 ? 'AD' : '40') : POINT_SEQ[state.points[0]];
+  const p1 = state.deuce ? (state.advantage === 1 ? 'AD' : '40') : POINT_SEQ[state.points[1]];
+  return p0 + '-' + p1;
+}
+
+function openCSV() {
+  const tbody = document.getElementById('csv-tbody');
+  const rows = state.eventLog.map((e, i) => {
+    let cls = '';
+    if (e.type === 'POINT') cls = 'td-winner';
+    else if (e.type === 'FAULT' || e.type === 'DOUBLE FAULT') cls = 'td-fault';
+    else if (e.type === 'VIOLATION') cls = 'td-violation';
+    else cls = 'td-winner';
+    return `<tr>
+      <td>${i+1}</td>
+      <td class="${cls}">${e.type}</td>
+      <td>${e.set}</td>
+      <td>${e.game}</td>
+      <td>${e.score||'-'}</td>
+      <td class="${cls}">${e.name||'-'}</td>
+      <td>${e.reason||'-'}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="7" style="color:var(--grey);text-align:center;padding:20px">No events logged yet</td></tr>';
+  document.getElementById('csv-modal-sub').textContent = state.names[0] + ' vs ' + state.names[1];
+  document.getElementById('csv-modal').classList.add('show');
+}
+
+function closeCSV() { document.getElementById('csv-modal').classList.remove('show'); }
+
+function downloadCSV() {
+  const headers = ['#','TYPE','SET','GAME','SCORE','PLAYER','DETAIL'];
+  const rows = state.eventLog.map((e, i) =>
+    [i+1, e.type, e.set, e.game, e.score||'', e.name||'', e.reason||''].map(v => '"'+String(v).replace(/"/g,'""')+'"').join(',')
+  );
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (state.names[0]+'_vs_'+state.names[1]).replace(/\s+/g,'_')+'_match_log.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+
+
+// ─── DISPLAY ──────────────────────────────────────────────────────────────────
+function pointLabel(p, isDeuce, isAdv, isTB, tbPts, advantage) {
+  if (isTB) return tbPts;
+  if (isDeuce) return advantage === p ? 'AD' : '40';
+  return POINT_SEQ[state.points[p]];
+}
+
+function updateDisplay() {
+  for (let p = 0; p < 2; p++) {
+    const isTB = state.isTiebreak;
+    const lbl = isTB
+      ? state.tbPoints[p]
+      : (state.deuce ? (state.advantage === p ? 'AD' : '40') : POINT_SEQ[state.points[p]]);
+
+    // Sets HTML
+    let setsHtml = '';
+    for (let s = 0; s < state.sets[p].length; s++) {
+      const won = state.sets[p][s] > state.sets[1-p][s];
+      const tb = state.tbScores && state.tbScores[s];
+      const tbStr = tb ? `<sup style="font-size:0.55em">(${tb[p]})</sup>` : '';
+      setsHtml += `<span class="${won ? 'set-val' : ''}" style="opacity:${won?1:0.4}">${state.sets[p][s]}${tbStr}</span>`;
+      if (s < state.sets[p].length - 1) setsHtml += '<span style="color:var(--grey-dark)">·</span>';
+    }
+
+    // Default layout
+    document.getElementById('point-' + p).textContent = lbl;
+    document.getElementById('games-' + p).textContent = state.games[p];
+    document.getElementById('sets-' + p).innerHTML = setsHtml;
+    document.getElementById('panel-' + p).classList.toggle('serving', state.serving === p);
+    document.getElementById('panel-' + p).classList.toggle('last-won', false);
+
+    // Tablet layout
+    const tPt = document.getElementById('tablet-point-' + p);
+    if (tPt) tPt.textContent = lbl;
+    const tGm = document.getElementById('tablet-games-' + p);
+    if (tGm) tGm.textContent = state.games[p];
+    const tSt = document.getElementById('tablet-sets-' + p);
+    if (tSt) tSt.innerHTML = setsHtml;
+    const tPl = document.getElementById('tablet-player-' + p);
+    if (tPl) {
+      tPl.classList.toggle('serving', state.serving === p);
+      tPl.classList.toggle('last-won', false);
+    }
+  }
+  // Highlight last point winner
+  if (state.pointLog.length > 0) {
+    document.getElementById('panel-' + state.pointLog[0].winner).classList.add('last-won');
+    const tPl = document.getElementById('tablet-player-' + state.pointLog[0].winner);
+    if (tPl) tPl.classList.add('last-won');
+  }
+
+  // Update give-set button labels with player names
+  document.getElementById('giveset-0').textContent = 'SET → ' + state.names[0];
+  document.getElementById('giveset-1').textContent = 'SET → ' + state.names[1];
+
+  // Tiebreak buttons: only enabled when games are 0-0 and not already in tiebreak
+  const atZeroZero = state.games[0] === 0 && state.games[1] === 0 && !state.isTiebreak;
+  const tbNote = document.getElementById('tb-note');
+  [7,10,11].forEach(n => {
+    const btn = document.getElementById('tb-' + n);
+    if (btn) btn.disabled = !atZeroZero;
+  });
+  if (tbNote) tbNote.textContent = atZeroZero ? 'tap to start immediately' : (state.isTiebreak ? 'tiebreak in progress' : 'only available at 0–0 games');
+  saveState();
+}
+
+// ─── STATS ────────────────────────────────────────────────────────────────────
+function statsHTML(target) {
+  const s = state.stats;
+  const n = state.names;
+  const total = [s.totalPoints[0] || 1, s.totalPoints[1] || 1];
+
+  function row(label, v0, v1) {
+    return `<div class="stat-row">
+      <div class="stat-val-left">${v0}</div>
+      <div class="stat-label">${label}</div>
+      <div class="stat-val-right">${v1}</div>
+    </div>`;
+  }
+  function barRow(label, v0, v1) {
+    const sum = (v0+v1) || 1;
+    const pct0 = Math.round(v0/sum*100);
+    const pct1 = 100 - pct0;
+    return `<div class="stat-bar-row">
+      <div class="stat-bar-label"><span>${v0}</span><span>${label}</span><span>${v1}</span></div>
+      <div class="stat-bar-track">
+        <div class="stat-bar-fill-left" style="width:${pct0}%"></div>
+        <div class="stat-bar-fill-right" style="width:${pct1}%"></div>
+      </div>
+    </div>`;
+  }
+
+  const setsScore = `${state.setsWon[0]}–${state.setsWon[1]}`;
+  const gamesScore = `${state.games[0]}–${state.games[1]}`;
+
+  return `
+    <div class="stat-section">
+      <h4>SCORE</h4>
+      ${row('SETS', state.setsWon[0], state.setsWon[1])}
+      ${row('GAMES THIS SET', state.games[0], state.games[1])}
+      ${row('POINTS THIS GAME', state.isTiebreak ? state.tbPoints[0] : POINT_SEQ[state.points[0]], state.isTiebreak ? state.tbPoints[1] : POINT_SEQ[state.points[1]])}
+    </div>
+    <div class="stat-section">
+      <h4>POINTS</h4>
+      ${barRow('TOTAL POINTS WON', s.totalPoints[0], s.totalPoints[1])}
+      ${barRow('WINNERS', s.winners[0], s.winners[1])}
+      ${barRow('ACES', s.aces[0], s.aces[1])}
+      ${barRow('UNFORCED ERRORS', s.unforcedErrors[0], s.unforcedErrors[1])}
+      ${barRow('FORCED ERRORS', s.forcedErrors[0], s.forcedErrors[1])}
+      ${barRow('DOUBLE FAULTS', s.doubleFaults[0], s.doubleFaults[1])}
+    </div>
+    <div class="stat-section" style="margin-bottom:0">
+      <h4>PLAYERS</h4>
+      <div class="stat-row" style="margin-bottom:4px">
+        <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--accent);text-align:right">${n[0]}</div>
+        <div></div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--white);opacity:0.5;text-align:left">${n[1]}</div>
+      </div>
+    </div>
+  `;
+}
+
+function updateStats() {
+  document.getElementById('stats-content').innerHTML = statsHTML();
+  document.getElementById('stats-match-label').textContent =
+    state.names[0] + ' vs ' + state.names[1];
+
+  // Point log
+  const logEl = document.getElementById('point-log');
+  logEl.innerHTML = state.pointLog.slice(0,30).map((entry, i) =>
+    `<div class="log-entry">
+      <span class="log-num">${state.pointLog.length - i}</span>
+      <span class="log-winner">${entry.name}</span>
+      <span class="log-reason">— ${entry.reason}</span>
+    </div>`
+  ).join('');
+}
+
+// ─── BANNER ───────────────────────────────────────────────────────────────────
+let bannerTimeout = null;
+function showBanner(type, name) {
+  const banner = document.getElementById('banner');
+  document.getElementById('banner-sub').textContent = type + ' WON';
+  document.getElementById('banner-name').textContent = name;
+  banner.classList.add('show');
+  if (bannerTimeout) clearTimeout(bannerTimeout);
+  bannerTimeout = setTimeout(() => banner.classList.remove('show'), 1800);
+}
+
+// ─── MATCH OVER ───────────────────────────────────────────────────────────────
+function showMatchOver(winner) {
+  if (clockInterval) clearInterval(clockInterval);
+  document.getElementById('final-winner').textContent = state.names[winner];
+  const setsStr = state.sets[0].map((g,i) => {
+    const tb = state.tbScores && state.tbScores[i];
+    return tb
+      ? `${state.sets[0][i]}(${tb[0]})–${state.sets[1][i]}(${tb[1]})`
+      : `${state.sets[0][i]}–${state.sets[1][i]}`;
+  }).join(' ');
+  document.getElementById('final-score').textContent = setsStr;
+  document.getElementById('final-stats-content').innerHTML = statsHTML();
+  document.getElementById('match-over').classList.add('show');
+}
+
+function resetAll() {
+  localStorage.removeItem('court_state');
+  location.reload();
+}
+
+// ─── PERSIST ──────────────────────────────────────────────────────────────────
+function saveState() {
+  try {
+    localStorage.setItem('court_state', JSON.stringify(state));
+  } catch(e) {}
+}
+
+function loadSavedState() {
+  try {
+    const raw = localStorage.getItem('court_state');
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    // Only resume if a match was actually in progress
+    if (!saved.names || saved.names[0] === 'PLAYER 1' && saved.names[1] === 'PLAYER 2'
+        && saved.stats.totalPoints[0] === 0 && saved.stats.totalPoints[1] === 0) return;
+    Object.assign(state, saved);
+    // Older saves predate tbScores; pad with nulls so completed sets still render
+    if (!Array.isArray(state.tbScores)) state.tbScores = state.sets[0].map(() => null);
+    // Show court screen
+    document.getElementById('setup-screen').style.display = 'none';
+    document.getElementById('court-screen').style.display = 'block';
+    updatePlayerNames();
+    applyViewMode();
+    startClock();
+    updateDisplay();
+    updateStats();
+    updateViolationDisplay();
+    updateFaultIndicators();
+    // Show resume banner
+    showBanner('RESUMED', state.names[0] + ' v ' + state.names[1]);
+  } catch(e) {
+    localStorage.removeItem('court_state');
+  }
+}
+
+// Auto-load on startup
+loadSavedState();
+
+// ─── STATS TOGGLE ─────────────────────────────────────────────────────────────
+function toggleStats() {
+  document.getElementById('stats-panel').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('show');
+  updateStats();
+}
+</script>
+</body>
+</html>
