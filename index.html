@@ -1584,8 +1584,8 @@ function awardPoint(winner) {
 
   state.stats.totalPoints[winner]++;
   if (reason === 'winner') state.stats.winners[winner]++;
-  else if (reason === 'forced') state.stats.forcedErrors[winner]++;
-  else if (reason === 'unforced') state.stats.unforcedErrors[winner]++;
+  else if (reason === 'forced') state.stats.forcedErrors[1 - winner]++;
+  else if (reason === 'unforced') state.stats.unforcedErrors[1 - winner]++;
   else if (reason === 'ace') { state.stats.aces[winner]++; state.stats.winners[winner]++; }
   else if (reason === 'doublefault') state.stats.doubleFaults[winner]++;
 
