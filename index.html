@@ -1265,6 +1265,7 @@
   <div class="csv-sub" id="csv-modal-sub">POINT BY POINT · FAULT BY FAULT</div>
   <div id="csv-toolbar">
     <button class="csv-action-btn" onclick="downloadCSV()">↓ DOWNLOAD CSV</button>
+    <button class="csv-action-btn" onclick="downloadJSON()">↓ DOWNLOAD JSON</button>
     <button id="close-csv" onclick="closeCSV()">✕ CLOSE</button>
   </div>
   <div id="csv-table-wrap">
@@ -1970,6 +1971,45 @@ function downloadCSV() {
   const a = document.createElement('a');
   a.href = url;
   a.download = (state.names[0]+'_vs_'+state.names[1]).replace(/\s+/g,'_')+'_match_log.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── JSON RAW DATA FEED ─────────────────────────────────────────────────────────
+function buildMatchData() {
+  const setsStr = state.sets[0].map((g, i) => {
+    const tb = state.tbScores && state.tbScores[i];
+    return tb ? `${state.sets[0][i]}(${tb[0]})-${state.sets[1][i]}(${tb[1]})` : `${state.sets[0][i]}-${state.sets[1][i]}`;
+  }).join(' ');
+  return {
+    exportedAt: new Date().toISOString(),
+    match: {
+      names: state.names,
+      matchSets: state.matchSets,
+      finalSetRule: state.finalSetRule,
+      matchOver: state.matchOver,
+      winner: state.matchOver ? state.names[state.setsWon[0] > state.setsWon[1] ? 0 : 1] : null,
+      finalScore: setsStr,
+    },
+    score: {
+      points: state.points, games: state.games, sets: state.sets, tbScores: state.tbScores,
+      setsWon: state.setsWon, serving: state.serving, deuce: state.deuce,
+      advantage: state.advantage, isTiebreak: state.isTiebreak, tbPoints: state.tbPoints,
+    },
+    stats: state.stats,
+    violations: state.violations,
+    pointLog: state.pointLog,
+    eventLog: state.eventLog,
+  };
+}
+
+function downloadJSON() {
+  const json = JSON.stringify(buildMatchData(), null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (state.names[0]+'_vs_'+state.names[1]).replace(/\s+/g,'_')+'_match_data.json';
   a.click();
   URL.revokeObjectURL(url);
 }
