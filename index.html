@@ -90,6 +90,105 @@
   }
   #stats-toggle:hover { background: var(--accent); color: var(--green); }
 
+  #topbar-actions { display: none; align-items: center; gap: 8px; }
+  body.in-match #topbar-actions { display: flex; }
+  #pause-match-btn, #end-match-btn {
+    background: none;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  #pause-match-btn { border: 1px solid var(--amber); color: var(--amber); }
+  #pause-match-btn:hover { background: var(--amber); color: var(--green); }
+  #pause-match-btn.active { background: var(--amber); color: var(--green); }
+  #end-match-btn { border: 1px solid var(--red); color: #e88080; }
+  #end-match-btn:hover { background: var(--red); color: var(--white); }
+
+  /* ── MATCH TABS ── */
+  #match-tabs {
+    display: none;
+    align-items: stretch;
+    gap: 6px;
+    padding: 8px 16px;
+    background: rgba(0,0,0,0.25);
+    border-bottom: 1px solid rgba(200,245,90,0.1);
+    overflow-x: auto;
+  }
+  #match-tabs.visible { display: flex; }
+  .match-tab {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 2px;
+    padding: 6px 14px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--grey-dark);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .match-tab:hover { border-color: var(--accent-dim); }
+  .match-tab.active { border-color: var(--accent); background: rgba(200,245,90,0.08); }
+  .match-tab.ended { opacity: 0.55; }
+  .match-tab-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 1px;
+    color: var(--white);
+  }
+  .match-tab.active .match-tab-label { color: var(--accent); }
+  .match-tab-score {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    color: var(--grey);
+  }
+  .match-tab-add {
+    background: none;
+    border: 1px dashed var(--grey-dark);
+    color: var(--grey);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.9rem;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .match-tab-add:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── PAUSE OVERLAY ── */
+  #pause-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(5,15,10,0.82);
+    z-index: 450;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+  }
+  body.match-paused #pause-overlay { display: flex; }
+  #pause-overlay h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2rem, 8vw, 3.2rem);
+    letter-spacing: 6px;
+    color: var(--amber);
+  }
+  #pause-overlay button {
+    background: var(--accent);
+    border: none;
+    color: var(--green);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 4px;
+    padding: 12px 40px;
+    cursor: pointer;
+  }
+  #pause-overlay button:hover { background: var(--accent-dim); }
+
   /* ── SETUP SCREEN ── */
   #setup-screen {
     display: flex;
@@ -487,6 +586,8 @@
 
   /* ── POINT LOG ── */
   .log-section { margin-top: 20px; }
+  .stats-toolbar { display: flex; gap: 8px; margin: 14px 0; flex-wrap: wrap; }
+  .stats-toolbar .csv-action-btn { font-size: 0.62rem; padding: 7px 12px; }
   .log-entry {
     font-family: 'DM Mono', monospace;
     font-size: 0.65rem;
@@ -993,7 +1094,20 @@
     <div class="pill-time" id="pill-time">0:00</div>
     <div class="pill-label" id="pill-label">TIMER</div>
   </div>
+  <div id="topbar-actions">
+    <button id="pause-match-btn" onclick="togglePause()">⏸ PAUSE</button>
+    <button id="end-match-btn" onclick="endMatch()">⏏ END/RESET</button>
+  </div>
   <button id="stats-toggle" onclick="toggleStats()">STATS ▶</button>
+</div>
+
+<!-- MATCH TABS -->
+<div id="match-tabs"></div>
+
+<!-- PAUSE OVERLAY -->
+<div id="pause-overlay">
+  <h2>MATCH PAUSED</h2>
+  <button onclick="togglePause()">▶ RESUME</button>
 </div>
 
 <!-- SETUP -->
@@ -1241,6 +1355,9 @@
   <button id="close-stats" onclick="toggleStats()">✕</button>
   <h2>STATS</h2>
   <div class="sub" id="stats-match-label">LIVE MATCH</div>
+  <div class="stats-toolbar">
+    <button class="csv-action-btn" onclick="openCSV()">📄 VIEW / EXPORT MATCH LOG</button>
+  </div>
   <div id="stats-content"></div>
   <div class="log-section">
     <div class="stat-section">
@@ -1256,7 +1373,7 @@
   <h1 id="final-winner"></h1>
   <div class="final-score" id="final-score"></div>
   <div id="final-stats-content" style="width:100%;max-width:400px;margin-top:16px;"></div>
-  <button id="new-match-btn" onclick="resetAll()">NEW MATCH</button>
+  <button id="new-match-btn" onclick="newMatchSlot()">NEW MATCH</button>
 </div>
 
 <!-- CSV MODAL -->
@@ -1289,43 +1406,53 @@
 <script>
 // ─── STATE ───────────────────────────────────────────────────────────────────
 const POINT_SEQ = ['0','15','30','40','A'];
-let state = {
-  names: ['PLAYER 1','PLAYER 2'],
-  points: [0,0],
-  games: [0,0],
-  sets: [[],[]],
-  tbScores: [],       // per completed set: [tb0, tb1] if decided by tiebreak, else null
-  setsWon: [0,0],
-  serving: 0,
-  deuce: false,
-  advantage: -1,
-  isTiebreak: false,
-  tbPoints: [0,0],
-  matchSets: 1,
-  finalSetRule: 'tiebreak',
-  matchOver: false,
-  forcedTbTarget: null,
-  viewMode: 'default',
-  history: [],
-  pointLog: [],
-  eventLog: [],       // unified log for CSV: points, faults, violations
-  pendingReason: [null, null],
-  faults: [0, 0],     // current serve faults (resets after point)
-  violations: [
-    { timeCount: 0, codeCount: 0, timeLevel: 'clean', codeLevel: 'clean' },
-    { timeCount: 0, codeCount: 0, timeLevel: 'clean', codeLevel: 'clean' }
-  ],
-  stats: {
-    winners: [0,0],
-    forcedErrors: [0,0],
-    unforcedErrors: [0,0],
-    aces: [0,0],
-    doubleFaults: [0,0],
-    totalPoints: [0,0],
-    faults: [0,0],
-    doubleFaultsServed: [0,0],
-  }
-};
+// ─── MULTI-MATCH STATE ────────────────────────────────────────────────────────
+let matchIdSeq = 0;
+let matches = [];
+function createMatch() {
+  return {
+    id: ++matchIdSeq,
+    names: ['PLAYER 1','PLAYER 2'],
+    points: [0,0],
+    games: [0,0],
+    sets: [[],[]],
+    tbScores: [],       // per completed set: [tb0, tb1] if decided by tiebreak, else null
+    setsWon: [0,0],
+    serving: 0,
+    deuce: false,
+    advantage: -1,
+    isTiebreak: false,
+    tbPoints: [0,0],
+    matchSets: 1,
+    finalSetRule: 'tiebreak',
+    matchOver: false,
+    forcedTbTarget: null,
+    viewMode: 'default',
+    history: [],
+    pointLog: [],
+    eventLog: [],       // unified log for CSV: points, faults, violations
+    pendingReason: [null, null],
+    faults: [0, 0],     // current serve faults (resets after point)
+    violations: [
+      { timeCount: 0, codeCount: 0, timeLevel: 'clean', codeLevel: 'clean' },
+      { timeCount: 0, codeCount: 0, timeLevel: 'clean', codeLevel: 'clean' }
+    ],
+    stats: {
+      winners: [0,0],
+      forcedErrors: [0,0],
+      unforcedErrors: [0,0],
+      aces: [0,0],
+      doubleFaults: [0,0],
+      totalPoints: [0,0],
+      faults: [0,0],
+      doubleFaultsServed: [0,0],
+    },
+    startedAt: null,    // Date.now() ms when START MATCH was pressed
+    pausedAt: null,      // Date.now() ms when paused, else null
+    totalPausedMs: 0,    // accumulated paused time, for elapsed-clock math
+  };
+}
+let state = createMatch();
 
 // ─── FORMAT BUTTONS ───────────────────────────────────────────────────────────
 document.querySelectorAll('[data-sets]').forEach(btn => {
@@ -1462,17 +1589,56 @@ function toggleTimerPanel() {
 }
 
 // ─── MATCH CLOCK ──────────────────────────────────────────────────────────────
-let matchStart = null;
-let clockInterval = null;
-function startClock() {
-  matchStart = Date.now();
-  clockInterval = setInterval(() => {
-    const elapsed = Math.floor((Date.now() - matchStart) / 1000);
-    const m = Math.floor(elapsed/60);
-    const s = elapsed % 60;
-    document.getElementById('match-clock').textContent =
-      String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
-  }, 1000);
+// Elapsed time is derived from timestamps on the match itself (startedAt/pausedAt/
+// totalPausedMs), so background matches keep real elapsed time even while a
+// different match is the one on screen. One shared ticker just repaints whichever
+// match is currently active.
+let clockTickerInterval = null;
+function ensureClockTicker() {
+  if (clockTickerInterval) return;
+  clockTickerInterval = setInterval(renderMatchClock, 1000);
+  renderMatchClock();
+}
+function renderMatchClock() {
+  if (!state.startedAt) return;
+  const el = document.getElementById('match-clock');
+  if (!el) return;
+  const ms = (state.pausedAt || Date.now()) - state.startedAt - state.totalPausedMs;
+  const elapsed = Math.max(0, Math.floor(ms / 1000));
+  const m = Math.floor(elapsed / 60);
+  const s = elapsed % 60;
+  el.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+
+// ─── PAUSE ────────────────────────────────────────────────────────────────────
+function togglePause() {
+  if (!state.startedAt || state.matchOver) return;
+  if (state.pausedAt) {
+    state.totalPausedMs += Date.now() - state.pausedAt;
+    state.pausedAt = null;
+  } else {
+    state.pausedAt = Date.now();
+    if (timerInterval && !timerPaused) {
+      timerPaused = true;
+      const timerBtn = document.getElementById('pause-timer');
+      const pill = document.getElementById('topbar-timer-pill');
+      if (timerBtn) timerBtn.textContent = '▶ RESUME';
+      if (pill) pill.style.opacity = '0.5';
+    }
+  }
+  updatePauseUI();
+  renderMatchClock();
+  renderMatchTabs();
+  saveState();
+}
+function updatePauseUI() {
+  const paused = !!state.pausedAt;
+  document.body.classList.toggle('match-paused', paused);
+  const btn = document.getElementById('pause-match-btn');
+  if (btn) {
+    btn.textContent = paused ? '▶ RESUME' : '⏸ PAUSE';
+    btn.classList.toggle('active', paused);
+  }
 }
 
 // ─── SETUP ────────────────────────────────────────────────────────────────────
@@ -1491,16 +1657,103 @@ function startMatch() {
   state.finalSetRule = finalBtn ? finalBtn.dataset.finalset : 'tiebreak';
   state.viewMode = viewBtn ? viewBtn.dataset.viewmode : 'default';
   state.serving = serveBtn ? parseInt(serveBtn.dataset.serve) : 0;
+  state.startedAt = Date.now();
+  state.pausedAt = null;
+  state.totalPausedMs = 0;
+
+  if (!matches.includes(state)) matches.push(state);
 
   updatePlayerNames();
   applyViewMode();
 
   document.getElementById('setup-screen').style.display = 'none';
   document.getElementById('court-screen').style.display = 'block';
+  document.getElementById('match-over').classList.remove('show');
+  document.body.classList.add('in-match');
 
-  startClock();
+  ensureClockTicker();
+  updatePauseUI();
   updateDisplay();
   updateViolationDisplay();
+  renderMatchTabs();
+}
+
+// ─── MULTI-MATCH: NEW SLOT / SWITCH / END ────────────────────────────────────
+function resetSetupForm() {
+  document.getElementById('p1-name').value = '';
+  document.getElementById('p2-name').value = '';
+  document.querySelectorAll('[data-sets]').forEach(b => b.classList.toggle('active', b.dataset.sets === '1'));
+  document.querySelectorAll('[data-finalset]').forEach(b => b.classList.toggle('active', b.dataset.finalset === 'tiebreak'));
+  document.querySelectorAll('[data-viewmode]').forEach(b => b.classList.toggle('active', b.dataset.viewmode === 'default'));
+  document.querySelectorAll('[data-serve]').forEach(b => b.classList.toggle('active', b.dataset.serve === '0'));
+  document.getElementById('serve-btn-0').textContent = 'PLAYER 1';
+  document.getElementById('serve-btn-1').textContent = 'PLAYER 2';
+}
+
+function newMatchSlot() {
+  state = createMatch();
+  resetSetupForm();
+  document.body.classList.remove('in-match', 'match-paused');
+  document.getElementById('match-over').classList.remove('show');
+  document.getElementById('court-screen').style.display = 'none';
+  document.getElementById('setup-screen').style.display = 'flex';
+  renderMatchTabs();
+}
+
+function switchToMatch(id) {
+  const m = matches.find(mm => mm.id === id);
+  if (!m || m === state) return;
+  stopTimer();
+  state = m;
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('court-screen').style.display = 'block';
+  document.body.classList.add('in-match');
+  updatePlayerNames();
+  applyViewMode();
+  updateDisplay();
+  updateStats();
+  updateViolationDisplay();
+  updateFaultIndicators();
+  updatePauseUI();
+  if (state.matchOver) {
+    const winner = state.setsWon[0] > state.setsWon[1] ? 0 : 1;
+    renderMatchOverScreen(winner, state);
+  } else {
+    document.getElementById('match-over').classList.remove('show');
+  }
+  renderMatchTabs();
+  saveState();
+}
+
+function endMatch() {
+  if (!confirm('End and remove this match? This cannot be undone (export the log first if you need it).')) return;
+  stopTimer();
+  const idx = matches.indexOf(state);
+  if (idx !== -1) matches.splice(idx, 1);
+  document.getElementById('match-over').classList.remove('show');
+  if (matches.length) {
+    const next = matches[Math.max(0, idx - 1)];
+    switchToMatch(next.id);
+  } else {
+    newMatchSlot();
+  }
+  saveState();
+}
+
+function renderMatchTabs() {
+  const bar = document.getElementById('match-tabs');
+  if (!bar) return;
+  if (matches.length === 0) { bar.classList.remove('visible'); bar.innerHTML = ''; return; }
+  bar.classList.add('visible');
+  bar.innerHTML = matches.map(m => {
+    const active = m === state;
+    const score = m.matchOver ? 'FINAL' : (m.setsWon[0] + '–' + m.setsWon[1]);
+    const pausedMark = m.pausedAt ? ' ⏸' : '';
+    return `<div class="match-tab ${active ? 'active' : ''} ${m.matchOver ? 'ended' : ''}" onclick="switchToMatch(${m.id})">
+      <span class="match-tab-label">${m.names[0]} vs ${m.names[1]}${pausedMark}</span>
+      <span class="match-tab-score">${score}</span>
+    </div>`;
+  }).join('') + `<button class="match-tab-add" onclick="newMatchSlot()" title="Start another match">+ NEW</button>`;
 }
 
 // ─── REASON SELECT ────────────────────────────────────────────────────────────
@@ -1722,7 +1975,8 @@ function winSet(winner) {
   if (state.setsWon[winner] >= state.matchSets) {
     state.matchOver = true;
     showBanner('SET', state.names[winner]);
-    setTimeout(() => showMatchOver(winner), 1800);
+    const finishedMatch = state;
+    setTimeout(() => showMatchOver(winner, finishedMatch), 1800);
   } else {
     showBanner('SET', state.names[winner]);
   }
@@ -1751,7 +2005,8 @@ function giveSet(winner) {
   if (state.setsWon[winner] >= state.matchSets) {
     state.matchOver = true;
     showBanner('SET', state.names[winner]);
-    setTimeout(() => showMatchOver(winner), 1800);
+    const finishedMatch = state;
+    setTimeout(() => showMatchOver(winner, finishedMatch), 1800);
   } else {
     showBanner('SET', state.names[winner]);
   }
@@ -2079,6 +2334,7 @@ function updateDisplay() {
     if (btn) btn.disabled = !atZeroZero;
   });
   if (tbNote) tbNote.textContent = atZeroZero ? 'tap to start immediately' : (state.isTiebreak ? 'tiebreak in progress' : 'only available at 0–0 games');
+  renderMatchTabs();
   saveState();
 }
 
@@ -2166,29 +2422,31 @@ function showBanner(type, name) {
 }
 
 // ─── MATCH OVER ───────────────────────────────────────────────────────────────
-function showMatchOver(winner) {
-  if (clockInterval) clearInterval(clockInterval);
-  document.getElementById('final-winner').textContent = state.names[winner];
-  const setsStr = state.sets[0].map((g,i) => {
-    const tb = state.tbScores && state.tbScores[i];
+function renderMatchOverScreen(winner, m) {
+  if (!m.pausedAt) m.pausedAt = Date.now(); // freeze that match's elapsed clock
+  document.getElementById('final-winner').textContent = m.names[winner];
+  const setsStr = m.sets[0].map((g,i) => {
+    const tb = m.tbScores && m.tbScores[i];
     return tb
-      ? `${state.sets[0][i]}(${tb[0]})–${state.sets[1][i]}(${tb[1]})`
-      : `${state.sets[0][i]}–${state.sets[1][i]}`;
+      ? `${m.sets[0][i]}(${tb[0]})–${m.sets[1][i]}(${tb[1]})`
+      : `${m.sets[0][i]}–${m.sets[1][i]}`;
   }).join(' ');
   document.getElementById('final-score').textContent = setsStr;
   document.getElementById('final-stats-content').innerHTML = statsHTML();
   document.getElementById('match-over').classList.add('show');
+  renderMatchClock();
 }
 
-function resetAll() {
-  localStorage.removeItem('court_state');
-  location.reload();
+function showMatchOver(winner, m) {
+  renderMatchTabs();
+  if (m !== state) return; // umpire switched to a different match before this fired
+  renderMatchOverScreen(winner, m);
 }
 
 // ─── PERSIST ──────────────────────────────────────────────────────────────────
 function saveState() {
   try {
-    localStorage.setItem('court_state', JSON.stringify(state));
+    localStorage.setItem('court_state', JSON.stringify({ matches, activeMatchId: state.id }));
   } catch(e) {}
 }
 
@@ -2197,22 +2455,34 @@ function loadSavedState() {
     const raw = localStorage.getItem('court_state');
     if (!raw) return;
     const saved = JSON.parse(raw);
-    // Only resume if a match was actually in progress
-    if (!saved.names || saved.names[0] === 'PLAYER 1' && saved.names[1] === 'PLAYER 2'
-        && saved.stats.totalPoints[0] === 0 && saved.stats.totalPoints[1] === 0) return;
-    Object.assign(state, saved);
-    // Older saves predate tbScores; pad with nulls so completed sets still render
-    if (!Array.isArray(state.tbScores)) state.tbScores = state.sets[0].map(() => null);
-    // Show court screen
+    if (!saved || !Array.isArray(saved.matches) || saved.matches.length === 0) return;
+    matches = saved.matches;
+    matchIdSeq = matches.reduce((max, m) => Math.max(max, m.id || 0), 0);
+    matches.forEach(m => {
+      // Older saves predate tbScores; pad with nulls so completed sets still render
+      if (!Array.isArray(m.tbScores)) m.tbScores = m.sets[0].map(() => null);
+      if (typeof m.totalPausedMs !== 'number') m.totalPausedMs = 0;
+      if (m.pausedAt === undefined) m.pausedAt = null;
+      if (m.startedAt === undefined) m.startedAt = Date.now();
+    });
+    state = matches.find(m => m.id === saved.activeMatchId) || matches[0];
+
     document.getElementById('setup-screen').style.display = 'none';
     document.getElementById('court-screen').style.display = 'block';
+    document.body.classList.add('in-match');
     updatePlayerNames();
     applyViewMode();
-    startClock();
+    ensureClockTicker();
     updateDisplay();
     updateStats();
     updateViolationDisplay();
     updateFaultIndicators();
+    updatePauseUI();
+    if (state.matchOver) {
+      const winner = state.setsWon[0] > state.setsWon[1] ? 0 : 1;
+      renderMatchOverScreen(winner, state);
+    }
+    renderMatchTabs();
     // Show resume banner
     showBanner('RESUMED', state.names[0] + ' v ' + state.names[1]);
   } catch(e) {
