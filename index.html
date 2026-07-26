@@ -817,19 +817,95 @@
   #csv-table td.td-violation { color: var(--amber); }
   #csv-table tr:hover td { background: rgba(255,255,255,0.02); }
 
-  /* ── VIEW CSV BUTTON on setup ── */
-  #view-csv-btn {
+  /* ── EXIT MATCH BUTTON (topbar) ── */
+  #exit-match-btn {
     background: none;
     border: 1px solid var(--grey-dark);
     color: var(--grey);
     font-family: 'DM Mono', monospace;
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     letter-spacing: 2px;
-    padding: 10px 28px;
+    padding: 6px 12px;
     cursor: pointer;
     transition: all 0.2s;
   }
-  #view-csv-btn:hover { border-color: var(--accent); color: var(--accent); }
+  #exit-match-btn:hover { border-color: var(--red); color: var(--red); }
+
+  /* ── STATS PANEL EXPORT TOOLBAR ── */
+  #stats-export-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  #stats-export-row .csv-action-btn { font-size: 0.62rem; padding: 7px 12px; }
+
+  /* ── ACTIVE MATCHES LIST (main menu) ── */
+  .match-list-section { width: 100%; max-width: 600px; }
+  #match-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  #match-list .empty-note {
+    text-align: center;
+    color: var(--grey-dark);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 1px;
+    padding: 12px 0;
+  }
+  .match-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--grey-dark);
+    padding: 12px 16px;
+    transition: border-color 0.2s;
+  }
+  .match-card:hover { border-color: rgba(200,245,90,0.3); }
+  .match-card-names {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    color: var(--white);
+  }
+  .match-card-score {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--grey);
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+  .match-card-status {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 2px;
+    margin-top: 4px;
+  }
+  .match-card-status.live { color: var(--accent); }
+  .match-card-status.over { color: var(--grey); }
+  .match-card-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .match-card-btn {
+    background: none;
+    border: 1px solid var(--grey-dark);
+    color: var(--grey);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 1px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .match-card-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .match-card-btn.danger:hover { border-color: var(--red); color: var(--red); }
 
   @media (max-width: 500px) {
     .reason-grid { grid-template-columns: 1fr; }
@@ -988,12 +1064,13 @@
 <!-- TOP BAR -->
 <div id="topbar">
   <div class="logo">COURT</div>
-  <div class="match-time" id="match-clock">00:00</div>
+  <button id="exit-match-btn" onclick="exitToMenu()" style="display:none">← EXIT</button>
+  <div class="match-time" id="match-clock" style="display:none">00:00</div>
   <div id="topbar-timer-pill" onclick="document.getElementById('timers-section').scrollIntoView({behavior:'smooth'})" title="Jump to timers">
     <div class="pill-time" id="pill-time">0:00</div>
     <div class="pill-label" id="pill-label">TIMER</div>
   </div>
-  <button id="stats-toggle" onclick="toggleStats()">STATS ▶</button>
+  <button id="stats-toggle" onclick="toggleStats()" style="display:none">STATS ▶</button>
 </div>
 
 <!-- SETUP -->
@@ -1037,7 +1114,11 @@
     </div>
   </div>
   <button id="start-btn" onclick="startMatch()">START MATCH</button>
-  <button id="view-csv-btn" onclick="openCSV()">VIEW MATCH CSV</button>
+
+  <div class="match-list-section">
+    <p style="text-align:center;font-size:0.75rem;letter-spacing:2px;color:var(--grey);margin-bottom:14px;">ACTIVE MATCHES</p>
+    <div id="match-list"></div>
+  </div>
 </div>
 
 <!-- COURT -->
@@ -1241,6 +1322,11 @@
   <button id="close-stats" onclick="toggleStats()">✕</button>
   <h2>STATS</h2>
   <div class="sub" id="stats-match-label">LIVE MATCH</div>
+  <div id="stats-export-row">
+    <button class="csv-action-btn" onclick="downloadJSON()">↓ DOWNLOAD JSON</button>
+    <button class="csv-action-btn" onclick="downloadCSV()">↓ DOWNLOAD CSV</button>
+    <button class="csv-action-btn" onclick="openCSV()">VIEW LOG</button>
+  </div>
   <div id="stats-content"></div>
   <div class="log-section">
     <div class="stat-section">
@@ -1255,8 +1341,12 @@
   <div class="winner-label">MATCH WINNER</div>
   <h1 id="final-winner"></h1>
   <div class="final-score" id="final-score"></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:16px;">
+    <button class="csv-action-btn" onclick="downloadJSON()">↓ DOWNLOAD JSON</button>
+    <button class="csv-action-btn" onclick="downloadCSV()">↓ DOWNLOAD CSV</button>
+  </div>
   <div id="final-stats-content" style="width:100%;max-width:400px;margin-top:16px;"></div>
-  <button id="new-match-btn" onclick="resetAll()">NEW MATCH</button>
+  <button id="new-match-btn" onclick="backToMenuFromOver()">BACK TO MENU</button>
 </div>
 
 <!-- CSV MODAL -->
@@ -1289,43 +1379,58 @@
 <script>
 // ─── STATE ───────────────────────────────────────────────────────────────────
 const POINT_SEQ = ['0','15','30','40','A'];
-let state = {
-  names: ['PLAYER 1','PLAYER 2'],
-  points: [0,0],
-  games: [0,0],
-  sets: [[],[]],
-  tbScores: [],       // per completed set: [tb0, tb1] if decided by tiebreak, else null
-  setsWon: [0,0],
-  serving: 0,
-  deuce: false,
-  advantage: -1,
-  isTiebreak: false,
-  tbPoints: [0,0],
-  matchSets: 1,
-  finalSetRule: 'tiebreak',
-  matchOver: false,
-  forcedTbTarget: null,
-  viewMode: 'default',
-  history: [],
-  pointLog: [],
-  eventLog: [],       // unified log for CSV: points, faults, violations
-  pendingReason: [null, null],
-  faults: [0, 0],     // current serve faults (resets after point)
-  violations: [
-    { timeCount: 0, codeCount: 0, timeLevel: 'clean', codeLevel: 'clean' },
-    { timeCount: 0, codeCount: 0, timeLevel: 'clean', codeLevel: 'clean' }
-  ],
-  stats: {
-    winners: [0,0],
-    forcedErrors: [0,0],
-    unforcedErrors: [0,0],
-    aces: [0,0],
-    doubleFaults: [0,0],
-    totalPoints: [0,0],
-    faults: [0,0],
-    doubleFaultsServed: [0,0],
-  }
-};
+
+// All concurrent matches live here, keyed by id. `state` always points at
+// whichever match is currently shown on the court screen (or a throwaway
+// placeholder when no match is open).
+let matches = {};
+let currentMatchId = null;
+
+function createMatchState(id, names, matchSets, finalSetRule, viewMode, serving) {
+  return {
+    id,
+    names,
+    points: [0,0],
+    games: [0,0],
+    sets: [[],[]],
+    tbScores: [],       // per completed set: [tb0, tb1] if decided by tiebreak, else null
+    setsWon: [0,0],
+    serving,
+    deuce: false,
+    advantage: -1,
+    isTiebreak: false,
+    tbPoints: [0,0],
+    matchSets,
+    finalSetRule,
+    matchOver: false,
+    forcedTbTarget: null,
+    viewMode,
+    history: [],
+    pointLog: [],
+    eventLog: [],       // unified log for CSV: points, faults, violations
+    pendingReason: [null, null],
+    faults: [0, 0],     // current serve faults (resets after point)
+    violations: [
+      { timeCount: 0, codeCount: 0, timeLevel: 'clean', codeLevel: 'clean' },
+      { timeCount: 0, codeCount: 0, timeLevel: 'clean', codeLevel: 'clean' }
+    ],
+    stats: {
+      winners: [0,0],
+      forcedErrors: [0,0],
+      unforcedErrors: [0,0],
+      aces: [0,0],
+      doubleFaults: [0,0],
+      totalPoints: [0,0],
+      faults: [0,0],
+      doubleFaultsServed: [0,0],
+    },
+    startedAt: Date.now(),
+    createdAt: Date.now(),
+    endedAt: null,
+  };
+}
+
+let state = createMatchState('placeholder', ['PLAYER 1','PLAYER 2'], 1, 'tiebreak', 'default', 0);
 
 // ─── FORMAT BUTTONS ───────────────────────────────────────────────────────────
 document.querySelectorAll('[data-sets]').forEach(btn => {
@@ -1462,17 +1567,23 @@ function toggleTimerPanel() {
 }
 
 // ─── MATCH CLOCK ──────────────────────────────────────────────────────────────
-let matchStart = null;
+// The clock reflects real time elapsed since the current match was created,
+// so it keeps ticking in the background even while another match is on screen.
 let clockInterval = null;
+function updateClockDisplay() {
+  const end = (state.matchOver && state.endedAt) ? state.endedAt : Date.now();
+  const elapsed = Math.max(0, Math.floor((end - state.startedAt) / 1000));
+  const m = Math.floor(elapsed/60);
+  const s = elapsed % 60;
+  document.getElementById('match-clock').textContent =
+    String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
 function startClock() {
-  matchStart = Date.now();
-  clockInterval = setInterval(() => {
-    const elapsed = Math.floor((Date.now() - matchStart) / 1000);
-    const m = Math.floor(elapsed/60);
-    const s = elapsed % 60;
-    document.getElementById('match-clock').textContent =
-      String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
-  }, 1000);
+  if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
+  updateClockDisplay();
+  if (!state.matchOver) {
+    clockInterval = setInterval(updateClockDisplay, 1000);
+  }
 }
 
 // ─── SETUP ────────────────────────────────────────────────────────────────────
@@ -1486,21 +1597,139 @@ function startMatch() {
   const totalSets = setsBtn ? parseInt(setsBtn.dataset.sets) : 3;
   const setsToWin = Math.ceil(totalSets/2);
 
-  state.names = [p1, p2];
-  state.matchSets = setsToWin;
-  state.finalSetRule = finalBtn ? finalBtn.dataset.finalset : 'tiebreak';
-  state.viewMode = viewBtn ? viewBtn.dataset.viewmode : 'default';
-  state.serving = serveBtn ? parseInt(serveBtn.dataset.serve) : 0;
+  const id = 'm_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+  const finalSetRule = finalBtn ? finalBtn.dataset.finalset : 'tiebreak';
+  const viewMode = viewBtn ? viewBtn.dataset.viewmode : 'default';
+  const serving = serveBtn ? parseInt(serveBtn.dataset.serve) : 0;
+
+  const newState = createMatchState(id, [p1, p2], setsToWin, finalSetRule, viewMode, serving);
+  matches[id] = newState;
+  currentMatchId = id;
+  state = newState;
+
+  // Clear the setup fields so the next match starts blank
+  document.getElementById('p1-name').value = '';
+  document.getElementById('p2-name').value = '';
 
   updatePlayerNames();
   applyViewMode();
-
-  document.getElementById('setup-screen').style.display = 'none';
-  document.getElementById('court-screen').style.display = 'block';
+  clearSelectedReasons();
+  showCourtScreen();
 
   startClock();
   updateDisplay();
+  updateStats();
   updateViolationDisplay();
+  updateFaultIndicators();
+  saveState();
+}
+
+// ─── MULTI-MATCH NAVIGATION ───────────────────────────────────────────────────
+function clearSelectedReasons() {
+  document.querySelectorAll('.reason-btn').forEach(b => b.classList.remove('selected'));
+  sharedReason = null;
+}
+
+function showSetupScreen() {
+  if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
+  stopTimer();
+  document.getElementById('match-over').classList.remove('show');
+  document.getElementById('stats-panel').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+  document.getElementById('setup-screen').style.display = 'flex';
+  document.getElementById('court-screen').style.display = 'none';
+  document.getElementById('exit-match-btn').style.display = 'none';
+  document.getElementById('stats-toggle').style.display = 'none';
+  document.getElementById('match-clock').style.display = 'none';
+  renderMatchList();
+}
+
+function showCourtScreen() {
+  document.getElementById('setup-screen').style.display = 'none';
+  document.getElementById('court-screen').style.display = 'block';
+  document.getElementById('exit-match-btn').style.display = '';
+  document.getElementById('stats-toggle').style.display = '';
+  document.getElementById('match-clock').style.display = '';
+}
+
+function exitToMenu() {
+  saveState();
+  showSetupScreen();
+}
+
+function resumeMatch(id) {
+  const m = matches[id];
+  if (!m) return;
+  if (!Array.isArray(m.tbScores)) m.tbScores = m.sets[0].map(() => null);
+  currentMatchId = id;
+  state = m;
+
+  updatePlayerNames();
+  applyViewMode();
+  clearSelectedReasons();
+  showCourtScreen();
+  updateDisplay();
+  updateStats();
+  updateViolationDisplay();
+  updateFaultIndicators();
+
+  if (state.matchOver) {
+    const winner = state.setsWon[0] > state.setsWon[1] ? 0 : 1;
+    showMatchOver(winner);
+  } else {
+    startClock();
+  }
+}
+
+function deleteMatch(id) {
+  const m = matches[id];
+  if (!m) return;
+  if (!confirm('Delete match "' + m.names[0] + ' vs ' + m.names[1] + '"? This cannot be undone.')) return;
+  delete matches[id];
+  if (currentMatchId === id) currentMatchId = null;
+  saveState();
+  renderMatchList();
+}
+
+function renderMatchList() {
+  const container = document.getElementById('match-list');
+  if (!container) return;
+  const ids = Object.keys(matches).sort((a,b) => matches[b].createdAt - matches[a].createdAt);
+  if (!ids.length) {
+    container.innerHTML = '<div class="empty-note">No active matches yet</div>';
+    return;
+  }
+  container.innerHTML = ids.map(id => {
+    const m = matches[id];
+    const setsStr = m.sets[0].map((g,i) => {
+      const tb = m.tbScores && m.tbScores[i];
+      return tb ? `${m.sets[0][i]}(${tb[0]})-${m.sets[1][i]}(${tb[1]})` : `${m.sets[0][i]}-${m.sets[1][i]}`;
+    }).join(' ');
+    const liveScore = m.matchOver ? '' : ` · ${m.games[0]}-${m.games[1]} games`;
+    return `<div class="match-card">
+      <div class="match-card-info">
+        <div class="match-card-names">${escapeHTML(m.names[0])} <span style="opacity:.5">vs</span> ${escapeHTML(m.names[1])}</div>
+        <div class="match-card-score">${m.setsWon[0]}-${m.setsWon[1]} sets${setsStr ? ' · ' + setsStr : ''}${liveScore}</div>
+        <div class="match-card-status ${m.matchOver ? 'over' : 'live'}">${m.matchOver ? 'FINISHED' : '● LIVE'}</div>
+      </div>
+      <div class="match-card-actions">
+        <button class="match-card-btn" onclick="resumeMatch('${id}')">${m.matchOver ? 'VIEW' : 'RESUME'}</button>
+        <button class="match-card-btn" onclick="downloadJSON(matches['${id}'])">↓ JSON</button>
+        <button class="match-card-btn danger" onclick="deleteMatch('${id}')">DELETE</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function escapeHTML(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function backToMenuFromOver() {
+  document.getElementById('match-over').classList.remove('show');
+  exitToMenu();
 }
 
 // ─── REASON SELECT ────────────────────────────────────────────────────────────
@@ -1541,14 +1770,27 @@ function updatePlayerNames() {
   if (twb0) twb0.textContent = 'POINT → ' + p1;
   if (twb1) twb1.textContent = 'POINT → ' + p2;
 }
+let timersDefaultParent = null;
+let timersDefaultNextSibling = null;
 function applyViewMode() {
   const tablet = state.viewMode === 'tablet';
   document.body.classList.toggle('tablet-mode', tablet);
+  const slot = document.getElementById('tablet-timers-slot');
+  const timers = document.getElementById('timers-section');
+  if (!timersDefaultParent && timers) {
+    timersDefaultParent = timers.parentNode;
+    timersDefaultNextSibling = timers.nextSibling;
+  }
   if (tablet) {
-    const slot = document.getElementById('tablet-timers-slot');
-    const timers = document.getElementById('timers-section');
     if (slot && timers && timers.parentNode !== slot) {
       slot.appendChild(timers);
+    }
+  } else if (timersDefaultParent && timers && timers.parentNode !== timersDefaultParent) {
+    // Switching back to a default-view match: restore timers to their original spot
+    if (timersDefaultNextSibling && timersDefaultNextSibling.parentNode === timersDefaultParent) {
+      timersDefaultParent.insertBefore(timers, timersDefaultNextSibling);
+    } else {
+      timersDefaultParent.appendChild(timers);
     }
   }
 }
@@ -1960,9 +2202,10 @@ function openCSV() {
 
 function closeCSV() { document.getElementById('csv-modal').classList.remove('show'); }
 
-function downloadCSV() {
+function downloadCSV(s) {
+  s = s || state;
   const headers = ['#','TYPE','SET','GAME','SCORE','PLAYER','DETAIL'];
-  const rows = state.eventLog.map((e, i) =>
+  const rows = s.eventLog.map((e, i) =>
     [i+1, e.type, e.set, e.game, e.score||'', e.name||'', e.reason||''].map(v => '"'+String(v).replace(/"/g,'""')+'"').join(',')
   );
   const csv = [headers.join(','), ...rows].join('\n');
@@ -1970,46 +2213,48 @@ function downloadCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = (state.names[0]+'_vs_'+state.names[1]).replace(/\s+/g,'_')+'_match_log.csv';
+  a.download = (s.names[0]+'_vs_'+s.names[1]).replace(/\s+/g,'_')+'_match_log.csv';
   a.click();
   URL.revokeObjectURL(url);
 }
 
 // ─── JSON RAW DATA FEED ─────────────────────────────────────────────────────────
-function buildMatchData() {
-  const setsStr = state.sets[0].map((g, i) => {
-    const tb = state.tbScores && state.tbScores[i];
-    return tb ? `${state.sets[0][i]}(${tb[0]})-${state.sets[1][i]}(${tb[1]})` : `${state.sets[0][i]}-${state.sets[1][i]}`;
+function buildMatchData(s) {
+  s = s || state;
+  const setsStr = s.sets[0].map((g, i) => {
+    const tb = s.tbScores && s.tbScores[i];
+    return tb ? `${s.sets[0][i]}(${tb[0]})-${s.sets[1][i]}(${tb[1]})` : `${s.sets[0][i]}-${s.sets[1][i]}`;
   }).join(' ');
   return {
     exportedAt: new Date().toISOString(),
     match: {
-      names: state.names,
-      matchSets: state.matchSets,
-      finalSetRule: state.finalSetRule,
-      matchOver: state.matchOver,
-      winner: state.matchOver ? state.names[state.setsWon[0] > state.setsWon[1] ? 0 : 1] : null,
+      names: s.names,
+      matchSets: s.matchSets,
+      finalSetRule: s.finalSetRule,
+      matchOver: s.matchOver,
+      winner: s.matchOver ? s.names[s.setsWon[0] > s.setsWon[1] ? 0 : 1] : null,
       finalScore: setsStr,
     },
     score: {
-      points: state.points, games: state.games, sets: state.sets, tbScores: state.tbScores,
-      setsWon: state.setsWon, serving: state.serving, deuce: state.deuce,
-      advantage: state.advantage, isTiebreak: state.isTiebreak, tbPoints: state.tbPoints,
+      points: s.points, games: s.games, sets: s.sets, tbScores: s.tbScores,
+      setsWon: s.setsWon, serving: s.serving, deuce: s.deuce,
+      advantage: s.advantage, isTiebreak: s.isTiebreak, tbPoints: s.tbPoints,
     },
-    stats: state.stats,
-    violations: state.violations,
-    pointLog: state.pointLog,
-    eventLog: state.eventLog,
+    stats: s.stats,
+    violations: s.violations,
+    pointLog: s.pointLog,
+    eventLog: s.eventLog,
   };
 }
 
-function downloadJSON() {
-  const json = JSON.stringify(buildMatchData(), null, 2);
+function downloadJSON(s) {
+  s = s || state;
+  const json = JSON.stringify(buildMatchData(s), null, 2);
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = (state.names[0]+'_vs_'+state.names[1]).replace(/\s+/g,'_')+'_match_data.json';
+  a.download = (s.names[0]+'_vs_'+s.names[1]).replace(/\s+/g,'_')+'_match_data.json';
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -2167,7 +2412,10 @@ function showBanner(type, name) {
 
 // ─── MATCH OVER ───────────────────────────────────────────────────────────────
 function showMatchOver(winner) {
-  if (clockInterval) clearInterval(clockInterval);
+  if (!state.endedAt) state.endedAt = Date.now();
+  if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
+  updateClockDisplay();
+  saveState();
   document.getElementById('final-winner').textContent = state.names[winner];
   const setsStr = state.sets[0].map((g,i) => {
     const tb = state.tbScores && state.tbScores[i];
@@ -2180,43 +2428,53 @@ function showMatchOver(winner) {
   document.getElementById('match-over').classList.add('show');
 }
 
-function resetAll() {
-  localStorage.removeItem('court_state');
-  location.reload();
-}
-
 // ─── PERSIST ──────────────────────────────────────────────────────────────────
 function saveState() {
   try {
-    localStorage.setItem('court_state', JSON.stringify(state));
+    localStorage.setItem('court_matches', JSON.stringify({ matches, currentMatchId }));
   } catch(e) {}
 }
 
-function loadSavedState() {
+function migrateLegacyState() {
+  // Pre-multi-match saves stored a single match under 'court_state'.
   try {
     const raw = localStorage.getItem('court_state');
     if (!raw) return;
     const saved = JSON.parse(raw);
-    // Only resume if a match was actually in progress
-    if (!saved.names || saved.names[0] === 'PLAYER 1' && saved.names[1] === 'PLAYER 2'
-        && saved.stats.totalPoints[0] === 0 && saved.stats.totalPoints[1] === 0) return;
-    Object.assign(state, saved);
-    // Older saves predate tbScores; pad with nulls so completed sets still render
-    if (!Array.isArray(state.tbScores)) state.tbScores = state.sets[0].map(() => null);
-    // Show court screen
-    document.getElementById('setup-screen').style.display = 'none';
-    document.getElementById('court-screen').style.display = 'block';
-    updatePlayerNames();
-    applyViewMode();
-    startClock();
-    updateDisplay();
-    updateStats();
-    updateViolationDisplay();
-    updateFaultIndicators();
-    // Show resume banner
-    showBanner('RESUMED', state.names[0] + ' v ' + state.names[1]);
+    const hasProgress = saved.names && !(saved.names[0] === 'PLAYER 1' && saved.names[1] === 'PLAYER 2'
+      && saved.stats && saved.stats.totalPoints[0] === 0 && saved.stats.totalPoints[1] === 0);
+    if (hasProgress) {
+      const id = 'm_legacy_' + Date.now();
+      saved.id = id;
+      if (!Array.isArray(saved.tbScores)) saved.tbScores = saved.sets[0].map(() => null);
+      if (!saved.startedAt) saved.startedAt = Date.now();
+      if (!saved.createdAt) saved.createdAt = saved.startedAt;
+      matches[id] = saved;
+    }
+    localStorage.removeItem('court_state');
   } catch(e) {
     localStorage.removeItem('court_state');
+  }
+}
+
+function loadSavedState() {
+  try {
+    const raw = localStorage.getItem('court_matches');
+    if (!raw) { migrateLegacyState(); saveState(); showSetupScreen(); return; }
+    const saved = JSON.parse(raw);
+    matches = saved.matches || {};
+    Object.values(matches).forEach(m => {
+      // Older saves predate tbScores / startedAt; backfill so old matches still render
+      if (!Array.isArray(m.tbScores)) m.tbScores = m.sets[0].map(() => null);
+      if (!m.startedAt) m.startedAt = m.createdAt || Date.now();
+      if (!m.createdAt) m.createdAt = m.startedAt;
+    });
+    // Always land on the main menu on load; the user picks which match to resume.
+    currentMatchId = null;
+    showSetupScreen();
+  } catch(e) {
+    localStorage.removeItem('court_matches');
+    showSetupScreen();
   }
 }
 
